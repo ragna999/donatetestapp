@@ -21,7 +21,7 @@ const campaigns = [
   },
 ];
 
-export default function HomePageCampaign() {
+export default function Page() {
   const { login, logout, ready, authenticated, user } = usePrivy();
 
   if (!ready) return <p>Loading...</p>;
