@@ -2,6 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { usePrivy } from '@privy-io/react-auth';
+
 
 const campaigns = [
   {
@@ -21,6 +23,27 @@ const campaigns = [
 ];
 
 export default function HomePageCampaign() {
+
+   const { login, logout, ready, authenticated, user } = usePrivy();
+
+  if (!ready) return <p>Loading...</p>;
+
+  return (
+    <div className="p-6">
+      {!authenticated ? (
+        <button onClick={login} className="bg-black text-white px-4 py-2 rounded">
+          Connect Wallet
+        </button>
+      ) : (
+        <div>
+          <p>Connected: {user?.wallet?.address}</p>
+          <button onClick={logout} className="mt-2 bg-gray-300 px-4 py-2 rounded">
+            Logout
+          </button>
+           </div>
+      )}
+    </div>
+  );
   return (
     <div className="min-h-screen bg-gray-100 font-sans text-gray-900">
       <div className="flex justify-between items-center px-6 py-4">
