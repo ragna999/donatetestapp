@@ -38,36 +38,41 @@ export default function ProfilePage() {
   const twitterStatus = twitter?.username ? `✅ @${twitter.username}` : '❌ Belum Terhubung';
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white rounded shadow mt-10">
-      <h1 className="text-2xl font-bold mb-4">Profile</h1>
+    <div className="max-w-3xl mx-auto p-8 bg-white rounded-lg shadow-lg mt-12 space-y-6">
 
-      <div className="mb-4">
-        <p className="text-sm text-gray-600">Wallet Address:</p>
-        <p className="text-lg font-mono">{user?.wallet?.address}</p>
-      </div>
+      <h1 className="text-3xl font-bold text-gray-900">Profil Pengguna</h1>
 
-      <div className="mb-4">
-        <p className="text-sm text-gray-600">Email:</p>
-        <p>{email?.address || 'Belum menambahkan email'}</p>
-        <p>Status: {emailStatus}</p>
-        <button
-          onClick={() => linkEmail()}
-          className="mt-2 bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          Verifikasi Email
-        </button>
-      </div>
+{/* Wallet */}
+<div>
+  <p className="text-gray-600 text-sm">Wallet Address:</p>
+  <p className="text-lg font-mono text-gray-800">{user?.wallet?.address}</p>
+</div>
 
-      <div className="mb-6">
-        <p className="text-sm text-gray-600">Twitter:</p>
-        <p>Status: {twitterStatus}</p>
-        <button
-          onClick={() => linkTwitter()}
-          className="mt-2 bg-sky-500 text-white px-4 py-2 rounded"
-        >
-          Connect Twitter
-        </button>
-      </div>
+{/* Email */}
+<div>
+  <p className="text-gray-600 text-sm">Email:</p>
+  <p className="text-gray-800">{email?.address || 'Belum menambahkan email'}</p>
+  <p className="text-sm">Status: <span className="font-semibold">{emailStatus}</span></p>
+  <button
+    onClick={() => linkEmail()}
+    className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+  >
+    Verifikasi Email
+  </button>
+</div>
+
+{/* Twitter */}
+<div>
+  <p className="text-gray-600 text-sm">Twitter:</p>
+  <p className="text-sm">Status: <span className="font-semibold">{twitterStatus}</span></p>
+  <button
+    onClick={() => linkTwitter()}
+    className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
+  >
+    Connect Twitter
+  </button>
+</div>
+
 
       <div>
         <h2 className="text-xl font-semibold mb-2">Kampanye Kamu</h2>
