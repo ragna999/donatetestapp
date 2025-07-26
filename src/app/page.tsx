@@ -4,7 +4,6 @@ import React from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 
-
 const campaigns = [
   {
     id: 1,
@@ -23,34 +22,32 @@ const campaigns = [
 ];
 
 export default function HomePageCampaign() {
-
-   const { login, logout, ready, authenticated, user } = usePrivy();
+  const { login, logout, ready, authenticated, user } = usePrivy();
 
   if (!ready) return <p>Loading...</p>;
 
   return (
-    <div className="p-6">
-      {!authenticated ? (
-        <button onClick={login} className="bg-black text-white px-4 py-2 rounded">
-          Connect Wallet
-        </button>
-      ) : (
-        <div>
-          <p>Connected: {user?.wallet?.address}</p>
-          <button onClick={logout} className="mt-2 bg-gray-300 px-4 py-2 rounded">
-            Logout
-          </button>
-           </div>
-      )}
-    </div>
-  );
-  return (
     <div className="min-h-screen bg-gray-100 font-sans text-gray-900">
+      {/* Header */}
       <div className="flex justify-between items-center px-6 py-4">
         <h1 className="text-2xl font-bold">Donation Platform</h1>
-        <button className="bg-black text-white px-4 py-2 rounded">Connect Wallet</button>
+        {!authenticated ? (
+          <button onClick={login} className="bg-black text-white px-4 py-2 rounded">
+            Connect Wallet
+          </button>
+        ) : (
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-800">
+              {user?.wallet?.address.slice(0, 6)}...{user?.wallet?.address.slice(-4)}
+            </span>
+            <button onClick={logout} className="bg-gray-300 px-4 py-2 rounded text-sm">
+              Logout
+            </button>
+          </div>
+        )}
       </div>
 
+      {/* Search Bar */}
       <div className="px-6">
         <input
           type="text"
@@ -58,6 +55,7 @@ export default function HomePageCampaign() {
           className="w-full max-w-md px-4 py-2 rounded border mb-6"
         />
 
+        {/* Campaign List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {campaigns.map((c) => (
             <div key={c.id} className="bg-white rounded shadow p-4 flex flex-col">

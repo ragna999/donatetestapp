@@ -1,23 +1,21 @@
 'use client';
 
 import './globals.css';
-import { PrivyProvider } from '@privy-io/react-auth';
 import { ReactNode } from 'react';
+import { PrivyProvider } from '@privy-io/react-auth';
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      <body className="bg-gray-100 font-sans text-gray-900">
         <PrivyProvider
-          appId="cmd8u9f7200fnju0mfqxq836a" // GANTI DENGAN PUNYA LO
+          appId="cmd8u9f7200fnju0mfqxq836a"
           config={{
             loginMethods: ['wallet'],
-            appearance: {
-              theme: 'light',
-            },
+            appearance: { theme: 'light' },
           }}
         >
-          {children}
+          <main className="min-h-screen">{children}</main>
         </PrivyProvider>
       </body>
     </html>
