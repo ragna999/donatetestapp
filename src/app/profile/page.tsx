@@ -34,8 +34,9 @@ export default function ProfilePage() {
   ? (user.email as { address: string; isVerified: boolean })
   : null;
 
-const emailAddress = typeof emailObj === 'string' ? emailObj : emailObj?.address || '';
-const emailVerified = typeof emailObj === 'object' && emailObj?.isVerified;
+const emailAddress = emailObj?.address || '';
+const emailVerified = emailObj?.isVerified || false;
+
 
   const twitterUsername = user?.twitter?.username || '';
   const twitterVerified = !!twitterUsername;
