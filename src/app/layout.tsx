@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             appearance: { theme: 'light' },
           }}
         >
-
+        <Navbar/>
           <main className="min-h-screen">{children}</main>
         </PrivyProvider>
       </body>
