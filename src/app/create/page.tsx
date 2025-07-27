@@ -30,23 +30,16 @@ export default function CreateCampaignPage() {
 
     try {
       const eth = (window as any).ethereum;
-
       if (!eth) return alert('❌ Wallet tidak ditemukan di browser');
 
-      // Jika ada banyak wallet (misalnya Portal, MetaMask), pilih MetaMask
-      const providerFromExtension = eth.providers
-        ? eth.providers.find((p: any) => p.isMetaMask)
-        : eth;
+      // WAJIB: Pastikan wallet terkoneksi
+      await eth.request({ method: 'eth_requestAccounts' });
 
-      if (!providerFromExtension) {
-        return alert('❌ MetaMask tidak ditemukan. Pastikan sudah terinstal.');
-      }
-
-      const provider = new ethers.BrowserProvider(providerFromExtension);
+      const provider = new ethers.BrowserProvider(eth);
       const signer = await provider.getSigner();
       const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
 
-      const goalInWei = ethers.parseEther(goal); // ETH → wei
+      const goalInWei = ethers.parseEther(goal);
 
       const tx = await factory.createCampaign(title, desc, goalInWei);
       await tx.wait();
@@ -55,9 +48,9 @@ export default function CreateCampaignPage() {
       setTitle('');
       setDesc('');
       setGoal('');
-    } catch (err) {
-      console.error('❌ Error:', err);
-      alert('Gagal membuat campaign.');
+    } catch (err: any) {
+      console.error(err);
+      alert('Gagal membuat campaign: ' + (err.message || err));
     } finally {
       setLoading(false);
     }
