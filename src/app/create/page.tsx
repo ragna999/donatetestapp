@@ -2,8 +2,10 @@
 
 import React, { useState } from 'react';
 import { ethers } from 'ethers';
+import { usePrivy } from '@privy-io/react-auth';
 
 const FACTORY_ADDRESS = '0xc0f6b1ebc432574fd52164fee02cdb8d78a7d25f';
+
 const FACTORY_ABI = [
   {
     inputs: [
@@ -19,35 +21,47 @@ const FACTORY_ABI = [
 ];
 
 export default function CreateCampaignPage() {
+  const { user, authenticated, ready, login } = usePrivy();
+
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [goal, setGoal] = useState('');
   const [loading, setLoading] = useState(false);
+
+  if (!ready) return <p>Loading...</p>;
+  if (!authenticated) {
+    return (
+      <div className="p-6">
+        <p className="mb-4">Kamu belum login!</p>
+        <button onClick={login} className="bg-black text-white px-4 py-2 rounded">
+          Connect Wallet
+        </button>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const eth = (window as any).ethereum;
-      if (!eth) return alert('Please connect wallet');
-
-      const provider = new ethers.BrowserProvider(eth);
+      const wallet = user?.wallet as any; // sementara pakai `as any` untuk akses metode getEthersProvider
+      const provider = await wallet.getEthersProvider();
       const signer = await provider.getSigner();
-      const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
 
-      const goalInWei = ethers.parseEther(goal); // ETH → wei
+      const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
+      const goalInWei = ethers.parseEther(goal); // dari ETH ke wei
 
       const tx = await factory.createCampaign(title, desc, goalInWei);
       await tx.wait();
 
-      alert('Campaign berhasil dibuat!');
+      alert('✅ Kampanye berhasil dibuat!');
       setTitle('');
       setDesc('');
       setGoal('');
     } catch (err) {
       console.error(err);
-      alert('Gagal membuat campaign.');
+      alert('❌ Gagal membuat kampanye.');
     } finally {
       setLoading(false);
     }
@@ -89,7 +103,7 @@ export default function CreateCampaignPage() {
         </div>
         <button
           type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded"
+          className="bg-blue-600 text-white px-4 py-2 rounded w-full"
           disabled={loading}
         >
           {loading ? 'Mengirim...' : 'Buat Kampanye'}
