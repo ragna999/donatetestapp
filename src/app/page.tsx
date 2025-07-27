@@ -31,41 +31,46 @@ const CAMPAIGN_ABI = [
 export default function HomePage() {
   const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
 
-  useEffect(() => {
-    const fetchCampaigns = async () => {
-      if (typeof window.ethereum === 'undefined') return;
+ useEffect(() => {
+  const fetchCampaigns = async () => {
+    if (typeof window.ethereum === 'undefined') return;
 
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
 
-      const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
-      const addresses: string[] = await factory.getCampaigns();
+    const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
+    const addresses: string[] = await factory.getCampaigns();
 
-      const details = await Promise.all(
-        addresses.map(async (addr) => {
-          const campaign = new Contract(addr, CAMPAIGN_ABI, provider);
-          const [title, description, goal, raisedAmount] = await Promise.all([
-            campaign.title(),
-            campaign.description(),
-            campaign.goal(),
-            campaign.raisedAmount()
-          ]);
+    console.log('📦 Daftar alamat campaign:', addresses); // <- log alamat duluan
 
-          return {
-            address: addr,
-            title,
-            description,
-            goal: ethers.formatEther(goal),
-            raised: ethers.formatEther(raisedAmount)
-          };
-        })
-      );
+    const details = await Promise.all(
+      addresses.map(async (addr) => {
+        const campaign = new Contract(addr, CAMPAIGN_ABI, provider);
+        const [title, description, goal, raisedAmount] = await Promise.all([
+          campaign.title(),
+          campaign.description(),
+          campaign.goal(),
+          campaign.raisedAmount()
+        ]);
 
-      setCampaigns(details);
-    };
+        return {
+          address: addr,
+          title,
+          description,
+          goal: ethers.formatEther(goal),
+          raised: ethers.formatEther(raisedAmount)
+        };
+      })
+    );
 
-    fetchCampaigns();
-  }, []);
+    console.log('📊 Detail campaign:', details); // <- log hasil parsing
+
+    setCampaigns(details);
+  };
+
+  fetchCampaigns();
+}, []);
+
 
   return (
   <div className="p-6">
