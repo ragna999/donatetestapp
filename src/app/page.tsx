@@ -20,24 +20,19 @@ const campaigns = [
   },
 ];
 
-export default function Page() {
+export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-100 font-sans text-gray-900">
-      {/* Search Bar */}
-      <div className="px-6 pt-6">
+      <div className="px-6 mt-6">
         <input
           type="text"
           placeholder="Search campaigns"
           className="w-full max-w-md px-4 py-2 rounded border mb-6"
         />
 
-        {/* Campaign List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {campaigns.map((c) => (
-            <div
-              key={c.id}
-              className="bg-white rounded shadow p-4 flex flex-col"
-            >
+            <div key={c.id} className="bg-white rounded shadow p-4 flex flex-col">
               <img
                 src={c.banner}
                 alt={c.title}

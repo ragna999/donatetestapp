@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 
 export default function Navbar() {
-  const { user, authenticated, logout } = usePrivy();
+  const { user, authenticated, ready, login, logout } = usePrivy();
+
+  if (!ready) return null; // Hindari render sebelum Privy siap
 
   return (
     <nav className="bg-gray-100 px-6 py-4 flex justify-between items-center border-b border-gray-300">
@@ -13,7 +15,7 @@ export default function Navbar() {
         Donation Platform
       </Link>
 
-      {authenticated && (
+      {authenticated ? (
         <div className="flex items-center gap-4">
           <span className="font-mono text-sm text-gray-800">
             {user?.wallet?.address?.slice(0, 6)}...
@@ -34,6 +36,13 @@ export default function Navbar() {
             Logout
           </button>
         </div>
+      ) : (
+        <button
+          onClick={login}
+          className="bg-black text-white px-4 py-2 rounded"
+        >
+          Connect Wallet
+        </button>
       )}
     </nav>
   );
