@@ -68,8 +68,12 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Campaigns</h1>
+  <div className="p-6">
+    <h1 className="text-2xl font-bold mb-4">Campaigns</h1>
+
+    {campaigns.length === 0 ? (
+      <p className="text-gray-500">Belum ada kampanye yang aktif.</p>
+    ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {campaigns.map((c) => (
           <div key={c.address} className="border p-4 rounded bg-white shadow">
@@ -86,6 +90,8 @@ export default function HomePage() {
           </div>
         ))}
       </div>
-    </div>
-  );
+    )}
+  </div>
+);
+
 }

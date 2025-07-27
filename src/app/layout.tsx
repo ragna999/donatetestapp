@@ -12,7 +12,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <PrivyProvider
           appId="cmd8u9f7200fnju0mfqxq836a"
           config={{
-            loginMethods: ['wallet'],
+            loginMethods: ['wallet', 'email', 'twitter'],
             appearance: { theme: 'light' },
           }}
         >
