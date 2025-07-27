@@ -11,8 +11,12 @@ export default function ProfilePage() {
     authenticated,
     login,
     linkEmail,
-    linkTwitter,
+    linkTwitter
   } = usePrivy();
+
+  console.log('USER:', user);
+  console.log('EMAIL:', user?.email);
+  console.log('EMAIL TYPE:', typeof user?.email);
 
   const router = useRouter();
 
