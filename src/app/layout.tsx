@@ -3,7 +3,7 @@
 import './globals.css';
 import { ReactNode } from 'react';
 import { PrivyProvider } from '@privy-io/react-auth';
-import Navbar from './components/navbar';//astiin path sesuai
+import Navbar from './components/navbar';
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

@@ -23,7 +23,7 @@ const campaigns = [
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-100 font-sans text-gray-900">
-      <div className="px-6 mt-6">
+      <div className="">
         <input
           type="text"
           placeholder="Search campaigns"

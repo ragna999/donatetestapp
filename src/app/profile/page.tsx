@@ -55,50 +55,32 @@ export default function ProfilePage() {
         <p className="text-lg font-mono text-gray-800">{user?.wallet?.address}</p>
       </div>
 
-      {/* Email */}
-      <div>
-        <p className="text-gray-600 text-sm">Email:</p>
-        <p className="text-gray-800">{emailAddress || 'Belum menambahkan email'}</p>
-        <p className="text-sm">
-          Status:{' '}
-          <span className={`font-semibold ${emailVerified ? 'text-green-600' : 'text-red-600'}`}>
-            {emailStatus}
-          </span>
-        </p>
-        {!emailVerified && (
-          <button
-            onClick={async () => {
-              await linkEmail();
-              router.refresh(); // refresh data
-            }}
-            className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Verifikasi Email
-          </button>
-        )}
-      </div>
+      {/* Email Verification */}
+{!emailVerified && (
+  <button
+    onClick={async () => {
+      await linkEmail();
+      setTimeout(() => router.refresh(), 1500); // ⏱ kasih waktu sync
+    }}
+    className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+  >
+    Verifikasi Email
+  </button>
+)}
 
-      {/* Twitter */}
-      <div>
-        <p className="text-gray-600 text-sm">Twitter:</p>
-        <p className="text-sm">
-          Status:{' '}
-          <span className={`font-semibold ${twitterVerified ? 'text-green-600' : 'text-red-600'}`}>
-            {twitterStatus}
-          </span>
-        </p>
-        {!twitterVerified && (
-          <button
-            onClick={async () => {
-              await linkTwitter();
-              router.refresh(); // refresh data
-            }}
-            className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
-          >
-            Connect Twitter
-          </button>
-        )}
-      </div>
+
+      {/* Twitter Connect */}
+{!twitterVerified && (
+  <button
+    onClick={async () => {
+      await linkTwitter();
+      setTimeout(() => router.refresh(), 1500); // ⏱ delay biar update
+    }}
+    className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
+  >
+    Connect Twitter
+  </button>
+)}
 
       {/* Tombol Buat Kampanye */}
       {canCreateCampaign && (
