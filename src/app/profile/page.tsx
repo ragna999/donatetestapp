@@ -1,22 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
   const {
-  user,
-  ready,
-  authenticated,
-  login,
-  linkEmail,
-  linkTwitter
-} = usePrivy();
-
+    user,
+    ready,
+    authenticated,
+    login,
+    linkEmail,
+    linkTwitter,
+  } = usePrivy();
 
   const router = useRouter();
-  const [refreshKey, setRefreshKey] = useState(0); // buat force re-render
 
   if (!ready) return <p>Loading...</p>;
 
@@ -31,25 +29,20 @@ export default function ProfilePage() {
     );
   }
 
-  // Extract email info
-  const emailObj = typeof user?.email === 'object' && user.email !== null
-    ? (user.email as { address: string; isVerified: boolean })
-    : null;
+  const emailObj = user?.email as { address?: string; isVerified?: boolean } | null;
+  const twitterObj = user?.twitter;
 
   const emailAddress = emailObj?.address || '';
   const emailVerified = emailObj?.isVerified || false;
-
-  // Extract twitter info
-  const twitterUsername = user?.twitter?.username || '';
+  const twitterUsername = twitterObj?.username || '';
   const twitterVerified = !!twitterUsername;
 
   const emailStatus = emailVerified ? '✅ Terverifikasi' : '❌ Belum Terverifikasi';
   const twitterStatus = twitterVerified ? `✅ @${twitterUsername}` : '❌ Belum Terhubung';
-
   const canCreateCampaign = emailVerified && twitterVerified;
 
   return (
-    <div key={refreshKey} className="max-w-3xl mx-auto p-8 bg-white rounded-lg shadow-lg mt-12 space-y-6">
+    <div className="max-w-3xl mx-auto p-8 bg-white rounded-lg shadow-lg mt-12 space-y-6">
       <h1 className="text-3xl font-bold text-gray-900">Profil Pengguna</h1>
 
       {/* Wallet */}
@@ -69,19 +62,16 @@ export default function ProfilePage() {
           </span>
         </p>
         {!emailVerified && (
-  <button
-    onClick={async () => {
-      await linkEmail();
-      setTimeout(() => {
-        window.location.reload(); // ⏪ hard refresh biar data update
-      }, 1500);
-    }}
-    className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-  >
-    Verifikasi Email
-  </button>
-)}
-
+          <button
+            onClick={async () => {
+              await linkEmail();
+              setTimeout(() => router.refresh(), 1500); // re-render state
+            }}
+            className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Verifikasi Email
+          </button>
+        )}
       </div>
 
       {/* Twitter */}
@@ -94,18 +84,16 @@ export default function ProfilePage() {
           </span>
         </p>
         {!twitterVerified && (
-  <button
-    onClick={async () => {
-      await linkTwitter();
-      setTimeout(() => {
-        window.location.reload(); // ⏪ refresh biar status twitter keupdate
-      }, 1500);
-    }}
-    className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
-  >
-    Connect Twitter
-  </button>
-)}
+          <button
+            onClick={async () => {
+              await linkTwitter();
+              setTimeout(() => router.refresh(), 1500); // re-render
+            }}
+            className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
+          >
+            Connect Twitter
+          </button>
+        )}
       </div>
 
       {/* Tombol Buat Kampanye */}
