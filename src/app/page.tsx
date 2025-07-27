@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePrivy } from '@privy-io/react-auth';
 
 const campaigns = [
   {
@@ -22,45 +21,10 @@ const campaigns = [
 ];
 
 export default function Page() {
-  const { login, logout, ready, authenticated, user } = usePrivy();
-
-  if (!ready) return <p>Loading...</p>;
-
   return (
     <div className="min-h-screen bg-gray-100 font-sans text-gray-900">
-      {/* Header */}
-      <div className="flex justify-between items-center px-6 py-4">
-        <h1 className="text-2xl font-bold">Donation Platform</h1>
-        {!authenticated ? (
-          <button
-            onClick={login}
-            className="bg-black text-white px-4 py-2 rounded"
-          >
-            Connect Wallet
-          </button>
-        ) : (
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-800 font-mono">
-              {user?.wallet?.address.slice(0, 6)}...
-              {user?.wallet?.address.slice(-4)}
-            </span>
-            <Link href="/profile">
-              <button className="bg-blue-500 text-white px-4 py-2 rounded text-sm">
-                Profile
-              </button>
-            </Link>
-            <button
-              onClick={logout}
-              className="bg-gray-300 px-4 py-2 rounded text-sm"
-            >
-              Logout
-            </button>
-          </div>
-        )}
-      </div>
-
       {/* Search Bar */}
-      <div className="px-6">
+      <div className="px-6 pt-6">
         <input
           type="text"
           placeholder="Search campaigns"
