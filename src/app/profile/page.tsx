@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 
@@ -11,14 +11,11 @@ export default function ProfilePage() {
     authenticated,
     login,
     linkEmail,
-    linkTwitter
+    linkTwitter,
   } = usePrivy();
 
-  console.log('USER:', user);
-  console.log('EMAIL:', user?.email);
-  console.log('EMAIL TYPE:', typeof user?.email);
-
   const router = useRouter();
+  const [refreshKey, setRefreshKey] = useState(0); // for re-render
 
   if (!ready) return <p>Loading...</p>;
 
@@ -33,17 +30,17 @@ export default function ProfilePage() {
     );
   }
 
-  // Email info
+  // === Email ===
   const emailObj = typeof user?.email === 'object' && user.email !== null
-    ? (user.email as { address?: string; isVerified?: boolean })
+    ? (user.email as { address: string; isVerified?: boolean })
     : null;
 
   const emailAddress = emailObj?.address || '';
-  const emailVerified = emailObj?.isVerified === true; // ✅ eksplisit true
+  const emailVerified = emailObj?.isVerified ?? false;
 
-  // Twitter info
+  // === Twitter ===
   const twitterUsername = user?.twitter?.username || '';
-  const twitterVerified = twitterUsername !== '';
+  const twitterVerified = !!twitterUsername;
 
   const emailStatus = emailVerified ? '✅ Terverifikasi' : '❌ Belum Terverifikasi';
   const twitterStatus = twitterVerified ? `✅ @${twitterUsername}` : '❌ Belum Terhubung';
@@ -51,7 +48,7 @@ export default function ProfilePage() {
   const canCreateCampaign = emailVerified && twitterVerified;
 
   return (
-    <div className="max-w-3xl mx-auto p-8 bg-white rounded-lg shadow-lg mt-12 space-y-6">
+    <div key={refreshKey} className="max-w-3xl mx-auto p-8 bg-white rounded-lg shadow-lg mt-12 space-y-6">
       <h1 className="text-3xl font-bold text-gray-900">Profil Pengguna</h1>
 
       {/* Wallet */}
@@ -105,7 +102,7 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Tombol Buat Kampanye */}
+      {/* Buat Kampanye */}
       {canCreateCampaign && (
         <div className="pt-4">
           <button
