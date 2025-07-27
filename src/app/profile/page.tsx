@@ -29,14 +29,13 @@ export default function ProfilePage() {
     );
   }
 
-  // Extract values safely
- const emailObj = typeof user?.email === 'object' && user.email !== null
-  ? (user.email as { address: string; isVerified: boolean })
-  : null;
+  // Extract email safely
+  const emailObj = typeof user?.email === 'object' && user.email !== null
+    ? (user.email as { address: string; isVerified: boolean })
+    : null;
 
-const emailAddress = emailObj?.address || '';
-const emailVerified = emailObj?.isVerified || false;
-
+  const emailAddress = emailObj?.address || '';
+  const emailVerified = emailObj?.isVerified || false;
 
   const twitterUsername = user?.twitter?.username || '';
   const twitterVerified = !!twitterUsername;
@@ -48,7 +47,6 @@ const emailVerified = emailObj?.isVerified || false;
 
   return (
     <div className="max-w-3xl mx-auto p-8 bg-white rounded-lg shadow-lg mt-12 space-y-6">
-
       <h1 className="text-3xl font-bold text-gray-900">Profil Pengguna</h1>
 
       {/* Wallet */}
@@ -69,7 +67,10 @@ const emailVerified = emailObj?.isVerified || false;
         </p>
         {!emailVerified && (
           <button
-            onClick={linkEmail}
+            onClick={async () => {
+              await linkEmail();
+              router.refresh(); // refresh data
+            }}
             className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
             Verifikasi Email
@@ -88,7 +89,10 @@ const emailVerified = emailObj?.isVerified || false;
         </p>
         {!twitterVerified && (
           <button
-            onClick={linkTwitter}
+            onClick={async () => {
+              await linkTwitter();
+              router.refresh(); // refresh data
+            }}
             className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
           >
             Connect Twitter
@@ -96,7 +100,7 @@ const emailVerified = emailObj?.isVerified || false;
         )}
       </div>
 
-      {/* Buat Kampanye */}
+      {/* Tombol Buat Kampanye */}
       {canCreateCampaign && (
         <div className="pt-4">
           <button
