@@ -37,12 +37,13 @@ export default function ProfilePage() {
 
   const emailAddress = emailObj?.address || '';
   const emailVerified = emailObj?.isVerified ?? false;
-
+  const emailStatus = emailVerified ? `✅ @${emailAddress}` : '❌ Belum Terverifikasi';
+  
   // === Twitter ===
   const twitterUsername = user?.twitter?.username || '';
   const twitterVerified = !!twitterUsername;
 
-  const emailStatus = emailVerified ? '✅ Terverifikasi' : '❌ Belum Terverifikasi';
+  
   const twitterStatus = twitterVerified ? `✅ @${twitterUsername}` : '❌ Belum Terhubung';
 
   const canCreateCampaign = emailVerified && twitterVerified;
