@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
   const {
-    user,
-    ready,
-    authenticated,
-    login,
-    linkEmail,
-    linkTwitter,
-  } = usePrivy();
+  user,
+  ready,
+  authenticated,
+  login,
+  linkEmail,
+  linkTwitter
+} = usePrivy();
+
 
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0); // buat force re-render
@@ -68,16 +69,19 @@ export default function ProfilePage() {
           </span>
         </p>
         {!emailVerified && (
-          <button
-            onClick={async () => {
-              await linkEmail();
-              setTimeout(() => setRefreshKey((prev) => prev + 1), 1500);
-            }}
-            className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Verifikasi Email
-          </button>
-        )}
+  <button
+    onClick={async () => {
+      await linkEmail();
+      setTimeout(() => {
+        window.location.reload(); // ⏪ hard refresh biar data update
+      }, 1500);
+    }}
+    className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+  >
+    Verifikasi Email
+  </button>
+)}
+
       </div>
 
       {/* Twitter */}
@@ -90,16 +94,18 @@ export default function ProfilePage() {
           </span>
         </p>
         {!twitterVerified && (
-          <button
-            onClick={async () => {
-              await linkTwitter();
-              setTimeout(() => setRefreshKey((prev) => prev + 1), 1500);
-            }}
-            className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
-          >
-            Connect Twitter
-          </button>
-        )}
+  <button
+    onClick={async () => {
+      await linkTwitter();
+      setTimeout(() => {
+        window.location.reload(); // ⏪ refresh biar status twitter keupdate
+      }, 1500);
+    }}
+    className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
+  >
+    Connect Twitter
+  </button>
+)}
       </div>
 
       {/* Tombol Buat Kampanye */}
