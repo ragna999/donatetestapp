@@ -52,35 +52,40 @@ export default function ProfilePage() {
 <div>
   <p className="text-gray-600 text-sm">Email:</p>
   <p className="text-gray-800">{email?.address || 'Belum menambahkan email'}</p>
-  <p className="text-sm">Status: <span className="font-semibold">{emailStatus}</span></p>
-  <button
-    onClick={() => linkEmail()}
-    className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-  >
-    Verifikasi Email
-  </button>
+  <p className="text-sm">
+    Status:{' '}
+    <span className={`font-semibold ${email?.isVerified ? 'text-green-600' : 'text-red-600'}`}>
+      {emailStatus}
+    </span>
+  </p>
+  {!email?.isVerified && (
+    <button
+      onClick={() => linkEmail()}
+      className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+    >
+      Verifikasi Email
+    </button>
+  )}
 </div>
 
 {/* Twitter */}
 <div>
   <p className="text-gray-600 text-sm">Twitter:</p>
-  <p className="text-sm">Status: <span className="font-semibold">{twitterStatus}</span></p>
-  <button
-    onClick={() => linkTwitter()}
-    className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
-  >
-    Connect Twitter
-  </button>
+  <p className="text-sm">
+    Status:{' '}
+    <span className={`font-semibold ${twitter?.username ? 'text-green-600' : 'text-red-600'}`}>
+      {twitterStatus}
+    </span>
+  </p>
+  {!twitter?.username && (
+    <button
+      onClick={() => linkTwitter()}
+      className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
+    >
+      Connect Twitter
+    </button>
+  )}
 </div>
-
-
-      <div>
-        <h2 className="text-xl font-semibold mb-2">Kampanye Kamu</h2>
-        <ul className="list-disc pl-5">
-          <li>Bantu Korban Banjir</li>
-          <li>Donasi Pendidikan Anak</li>
-        </ul>
-      </div>
     </div>
   );
 }
