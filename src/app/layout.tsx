@@ -3,15 +3,12 @@
 import './globals.css';
 import { ReactNode } from 'react';
 import { PrivyProvider } from '@privy-io/react-auth';
-import Navbar from './components/navbar'; // atur path sesuai struktur folder lu
+import Navbar from './components/navbar';//astiin path sesuai
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className="bg-gray-100 font-sans text-gray-900">
-    <body className="bg-black text-white">
-        <Navbar />
-        {children}
-      </body>
         <PrivyProvider
           appId="cmd8u9f7200fnju0mfqxq836a"
           config={{
@@ -19,6 +16,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             appearance: { theme: 'light' },
           }}
         >
+          <Navbar />
           <main className="min-h-screen">{children}</main>
         </PrivyProvider>
       </body>
