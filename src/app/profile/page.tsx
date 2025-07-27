@@ -29,16 +29,21 @@ export default function ProfilePage() {
     );
   }
 
-  const emailObj = user?.email as { address?: string; isVerified?: boolean } | null;
-  const twitterObj = user?.twitter;
+  // Email info
+  const emailObj = typeof user?.email === 'object' && user.email !== null
+    ? (user.email as { address?: string; isVerified?: boolean })
+    : null;
 
   const emailAddress = emailObj?.address || '';
-  const emailVerified = emailObj?.isVerified || false;
-  const twitterUsername = twitterObj?.username || '';
-  const twitterVerified = !!twitterUsername;
+  const emailVerified = emailObj?.isVerified === true; // ✅ eksplisit true
+
+  // Twitter info
+  const twitterUsername = user?.twitter?.username || '';
+  const twitterVerified = twitterUsername !== '';
 
   const emailStatus = emailVerified ? '✅ Terverifikasi' : '❌ Belum Terverifikasi';
   const twitterStatus = twitterVerified ? `✅ @${twitterUsername}` : '❌ Belum Terhubung';
+
   const canCreateCampaign = emailVerified && twitterVerified;
 
   return (
@@ -65,7 +70,7 @@ export default function ProfilePage() {
           <button
             onClick={async () => {
               await linkEmail();
-              setTimeout(() => router.refresh(), 1500); // re-render state
+              setTimeout(() => window.location.reload(), 1500);
             }}
             className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
@@ -87,7 +92,7 @@ export default function ProfilePage() {
           <button
             onClick={async () => {
               await linkTwitter();
-              setTimeout(() => router.refresh(), 1500); // re-render
+              setTimeout(() => window.location.reload(), 1500);
             }}
             className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
           >
