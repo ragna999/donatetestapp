@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { ethers } from 'ethers';
 
-const FACTORY_ADDRESS = '0xc0f6b1ebc432574fd52164fee02cdb8d78a7d25f';
-const FACTORY_ABI = [
+const FACTORY_ADDRESS = '0xe35C7c9fcBd477fb34B612f71361dB0f8cE84C9C';
+const CAMPAIGN_ABI = [
   {
     inputs: [
       { internalType: 'string', name: '_title', type: 'string' },
@@ -43,7 +43,7 @@ export default function CreateCampaignPage() {
 
     const provider = new ethers.BrowserProvider(selectedProvider);
     const signer = await provider.getSigner();
-    const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
+    const factory = new ethers.Contract(FACTORY_ADDRESS, CAMPAIGN_ABI, signer);
 
     const goalInWei = ethers.parseEther(goal);
 
