@@ -24,37 +24,44 @@ export default function CreateCampaignPage() {
   const [goal, setGoal] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      const eth = (window as any).ethereum;
-      if (!eth) return alert('❌ Wallet tidak ditemukan di browser');
+  try {
+    const eth = (window as any).ethereum;
+    if (!eth) return alert('❌ Wallet tidak ditemukan');
 
-      // WAJIB: Pastikan wallet terkoneksi
-      await eth.request({ method: 'eth_requestAccounts' });
-
-      const provider = new ethers.BrowserProvider(eth);
-      const signer = await provider.getSigner();
-      const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
-
-      const goalInWei = ethers.parseEther(goal);
-
-      const tx = await factory.createCampaign(title, desc, goalInWei);
-      await tx.wait();
-
-      alert('✅ Kampanye berhasil dibuat!');
-      setTitle('');
-      setDesc('');
-      setGoal('');
-    } catch (err: any) {
-      console.error(err);
-      alert('Gagal membuat campaign: ' + (err.message || err));
-    } finally {
-      setLoading(false);
+    let selectedProvider = eth;
+    if (eth.providers?.length) {
+      const metamask = eth.providers.find((p: any) => p.isMetaMask);
+      if (!metamask) return alert('❌ MetaMask tidak ditemukan');
+      selectedProvider = metamask;
     }
-  };
+
+    await selectedProvider.request({ method: 'eth_requestAccounts' });
+
+    const provider = new ethers.BrowserProvider(selectedProvider);
+    const signer = await provider.getSigner();
+    const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
+
+    const goalInWei = ethers.parseEther(goal);
+
+    const tx = await factory.createCampaign(title, desc, goalInWei);
+    await tx.wait();
+
+    alert('✅ Kampanye berhasil dibuat!');
+    setTitle('');
+    setDesc('');
+    setGoal('');
+  } catch (err: any) {
+    console.error(err);
+    alert('❌ Gagal membuat campaign: ' + (err.message || err));
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="max-w-xl mx-auto mt-10 p-6 bg-white rounded shadow">
