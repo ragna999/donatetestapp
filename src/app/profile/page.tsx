@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 
@@ -15,6 +15,7 @@ export default function ProfilePage() {
   } = usePrivy();
 
   const router = useRouter();
+  const [refreshKey, setRefreshKey] = useState(0); // buat force re-render
 
   if (!ready) return <p>Loading...</p>;
 
@@ -29,7 +30,7 @@ export default function ProfilePage() {
     );
   }
 
-  // Extract email safely
+  // Extract email info
   const emailObj = typeof user?.email === 'object' && user.email !== null
     ? (user.email as { address: string; isVerified: boolean })
     : null;
@@ -37,6 +38,7 @@ export default function ProfilePage() {
   const emailAddress = emailObj?.address || '';
   const emailVerified = emailObj?.isVerified || false;
 
+  // Extract twitter info
   const twitterUsername = user?.twitter?.username || '';
   const twitterVerified = !!twitterUsername;
 
@@ -46,7 +48,7 @@ export default function ProfilePage() {
   const canCreateCampaign = emailVerified && twitterVerified;
 
   return (
-    <div className="max-w-3xl mx-auto p-8 bg-white rounded-lg shadow-lg mt-12 space-y-6">
+    <div key={refreshKey} className="max-w-3xl mx-auto p-8 bg-white rounded-lg shadow-lg mt-12 space-y-6">
       <h1 className="text-3xl font-bold text-gray-900">Profil Pengguna</h1>
 
       {/* Wallet */}
@@ -55,32 +57,50 @@ export default function ProfilePage() {
         <p className="text-lg font-mono text-gray-800">{user?.wallet?.address}</p>
       </div>
 
-      {/* Email Verification */}
-{!emailVerified && (
-  <button
-    onClick={async () => {
-      await linkEmail();
-      setTimeout(() => router.refresh(), 1500); // ⏱ kasih waktu sync
-    }}
-    className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-  >
-    Verifikasi Email
-  </button>
-)}
+      {/* Email */}
+      <div>
+        <p className="text-gray-600 text-sm">Email:</p>
+        <p className="text-gray-800">{emailAddress || 'Belum menambahkan email'}</p>
+        <p className="text-sm">
+          Status:{' '}
+          <span className={`font-semibold ${emailVerified ? 'text-green-600' : 'text-red-600'}`}>
+            {emailStatus}
+          </span>
+        </p>
+        {!emailVerified && (
+          <button
+            onClick={async () => {
+              await linkEmail();
+              setTimeout(() => setRefreshKey((prev) => prev + 1), 1500);
+            }}
+            className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Verifikasi Email
+          </button>
+        )}
+      </div>
 
-
-      {/* Twitter Connect */}
-{!twitterVerified && (
-  <button
-    onClick={async () => {
-      await linkTwitter();
-      setTimeout(() => router.refresh(), 1500); // ⏱ delay biar update
-    }}
-    className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
-  >
-    Connect Twitter
-  </button>
-)}
+      {/* Twitter */}
+      <div>
+        <p className="text-gray-600 text-sm">Twitter:</p>
+        <p className="text-sm">
+          Status:{' '}
+          <span className={`font-semibold ${twitterVerified ? 'text-green-600' : 'text-red-600'}`}>
+            {twitterStatus}
+          </span>
+        </p>
+        {!twitterVerified && (
+          <button
+            onClick={async () => {
+              await linkTwitter();
+              setTimeout(() => setRefreshKey((prev) => prev + 1), 1500);
+            }}
+            className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
+          >
+            Connect Twitter
+          </button>
+        )}
+      </div>
 
       {/* Tombol Buat Kampanye */}
       {canCreateCampaign && (
