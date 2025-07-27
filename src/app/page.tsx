@@ -25,7 +25,14 @@ const CAMPAIGN_ABI = [
   { "inputs": [], "name": "title", "outputs": [{ "internalType": "string", "name": "", "type": "string" }], "stateMutability": "view", "type": "function" },
   { "inputs": [], "name": "description", "outputs": [{ "internalType": "string", "name": "", "type": "string" }], "stateMutability": "view", "type": "function" },
   { "inputs": [], "name": "goal", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
-  { "inputs": [], "name": "raisedAmount", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }
+  {
+  "inputs": [],
+  "name": "totalDonated",
+  "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+  "stateMutability": "view",
+  "type": "function"
+}
+
 ];
 
 export default function HomePage() {
@@ -46,11 +53,11 @@ export default function HomePage() {
     const details = await Promise.all(
       addresses.map(async (addr) => {
         const campaign = new Contract(addr, CAMPAIGN_ABI, provider);
-        const [title, description, goal, raisedAmount] = await Promise.all([
+        const [title, description, goal, totalDonated] = await Promise.all([
           campaign.title(),
           campaign.description(),
           campaign.goal(),
-          campaign.raisedAmount()
+          campaign.totalDonated()
         ]);
 
         return {
@@ -58,7 +65,7 @@ export default function HomePage() {
           title,
           description,
           goal: ethers.formatEther(goal),
-          raised: ethers.formatEther(raisedAmount)
+          raised: ethers.formatEther(totalDonated),
         };
       })
     );
