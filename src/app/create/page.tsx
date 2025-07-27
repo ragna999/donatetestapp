@@ -63,48 +63,54 @@ export default function CreateCampaignPage() {
 };
 
 
-  return (
-    <div className="max-w-xl mx-auto mt-10 p-6 bg-white rounded shadow">
-      <h1 className="text-2xl font-bold mb-4">Buat Kampanye Donasi</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm mb-1">Judul Kampanye</label>
-          <input
-            type="text"
-            className="w-full border px-4 py-2 rounded"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm mb-1">Deskripsi</label>
-          <textarea
-            className="w-full border px-4 py-2 rounded"
-            rows={4}
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm mb-1">Target Dana (ETH)</label>
-          <input
-            type="number"
-            className="w-full border px-4 py-2 rounded"
-            value={goal}
-            onChange={(e) => setGoal(e.target.value)}
-            required
-          />
-        </div>
-        <button
-          type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded"
+ return (
+  <div className="max-w-xl mx-auto mt-10 p-6 bg-white rounded shadow text-gray-800">
+    <h1 className="text-2xl font-bold mb-6 text-center">🚀 Buat Kampanye Donasi</h1>
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Judul Kampanye</label>
+        <input
+          type="text"
+          className="w-full border border-gray-300 px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
           disabled={loading}
-        >
-          {loading ? 'Mengirim...' : 'Buat Kampanye'}
-        </button>
-      </form>
-    </div>
-  );
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+        <textarea
+          className="w-full border border-gray-300 px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          rows={4}
+          value={desc}
+          onChange={(e) => setDesc(e.target.value)}
+          required
+          disabled={loading}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Target Dana (ETH)</label>
+        <input
+          type="number"
+          step="any"
+          className="w-full border border-gray-300 px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={goal}
+          onChange={(e) => setGoal(e.target.value)}
+          required
+          disabled={loading}
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={loading}
+        className={`w-full py-2 px-4 rounded text-white font-semibold transition ${
+          loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+        }`}
+      >
+        {loading ? '⏳ Mengirim...' : '✨ Buat Kampanye'}
+      </button>
+    </form>
+  </div>
+);
 }
