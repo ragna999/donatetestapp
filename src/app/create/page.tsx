@@ -5,7 +5,6 @@ import { ethers } from 'ethers';
 import { usePrivy } from '@privy-io/react-auth';
 
 const FACTORY_ADDRESS = '0xc0f6b1ebc432574fd52164fee02cdb8d78a7d25f';
-
 const FACTORY_ABI = [
   {
     inputs: [
@@ -21,20 +20,20 @@ const FACTORY_ABI = [
 ];
 
 export default function CreateCampaignPage() {
-  const { user, authenticated, ready, login } = usePrivy();
-
+  const { user, ready, authenticated, login } = usePrivy();
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [goal, setGoal] = useState('');
   const [loading, setLoading] = useState(false);
 
-  if (!ready) return <p>Loading...</p>;
+  if (!ready) return <p className="text-center mt-10">⏳ Loading...</p>;
+
   if (!authenticated) {
     return (
-      <div className="p-6">
-        <p className="mb-4">Kamu belum login!</p>
-        <button onClick={login} className="bg-black text-white px-4 py-2 rounded">
-          Connect Wallet
+      <div className="flex flex-col items-center justify-center h-[70vh] text-center">
+        <p className="mb-4 text-lg">Kamu belum login</p>
+        <button onClick={login} className="bg-black text-white px-5 py-2 rounded">
+          🔐 Connect Wallet
         </button>
       </div>
     );
@@ -45,14 +44,16 @@ export default function CreateCampaignPage() {
     setLoading(true);
 
     try {
-      const wallet = user?.wallet as any; // sementara pakai `as any` untuk akses metode getEthersProvider
-      const provider = await wallet.getEthersProvider();
+      // Pastikan user & wallet terdefinisi
+if (!user || !user.wallet) throw new Error('Wallet tidak ditemukan');
+
+const provider = await (user.wallet as any).getEthersProvider?.();
+
       const signer = await provider.getSigner();
+      const contract = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
+      const goalInWei = ethers.parseEther(goal);
 
-      const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
-      const goalInWei = ethers.parseEther(goal); // dari ETH ke wei
-
-      const tx = await factory.createCampaign(title, desc, goalInWei);
+      const tx = await contract.createCampaign(title, desc, goalInWei);
       await tx.wait();
 
       alert('✅ Kampanye berhasil dibuat!');
@@ -68,34 +69,37 @@ export default function CreateCampaignPage() {
   };
 
   return (
-    <div className="max-w-xl mx-auto mt-10 p-6 bg-white rounded shadow">
-      <h1 className="text-2xl font-bold mb-4">Buat Kampanye Donasi</h1>
+    <div className="max-w-2xl mx-auto mt-12 p-8 bg-white rounded-lg shadow-lg">
+      <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
+        🚀 Buat Kampanye Donasi
+      </h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm mb-1">Judul Kampanye</label>
+          <label className="block text-sm mb-1 text-gray-700">Judul Kampanye</label>
           <input
             type="text"
-            className="w-full border px-4 py-2 rounded"
+            className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
           />
         </div>
         <div>
-          <label className="block text-sm mb-1">Deskripsi</label>
+          <label className="block text-sm mb-1 text-gray-700">Deskripsi</label>
           <textarea
-            className="w-full border px-4 py-2 rounded"
             rows={4}
+            className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
             required
           />
         </div>
         <div>
-          <label className="block text-sm mb-1">Target Dana (ETH)</label>
+          <label className="block text-sm mb-1 text-gray-700">Target Dana (ETH)</label>
           <input
             type="number"
-            className="w-full border px-4 py-2 rounded"
+            step="any"
+            className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={goal}
             onChange={(e) => setGoal(e.target.value)}
             required
@@ -103,10 +107,10 @@ export default function CreateCampaignPage() {
         </div>
         <button
           type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded w-full"
           disabled={loading}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded font-semibold transition"
         >
-          {loading ? 'Mengirim...' : 'Buat Kampanye'}
+          {loading ? '⏳ Mengirim...' : '✨ Buat Kampanye'}
         </button>
       </form>
     </div>
