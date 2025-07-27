@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -44,12 +45,14 @@ export default function CreateCampaignPage() {
     setLoading(true);
 
     try {
-      // Pastikan user & wallet terdefinisi
-if (!user || !user.wallet) throw new Error('Wallet tidak ditemukan');
+      if (typeof window === 'undefined' || !window.ethereum)
+        throw new Error('Wallet tidak ditemukan');
 
-const provider = await (user.wallet as any).getEthersProvider?.();
+      const provider = new ethers.BrowserProvider(window.ethereum!);
+
 
       const signer = await provider.getSigner();
+
       const contract = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
       const goalInWei = ethers.parseEther(goal);
 
@@ -60,9 +63,9 @@ const provider = await (user.wallet as any).getEthersProvider?.();
       setTitle('');
       setDesc('');
       setGoal('');
-    } catch (err) {
-      console.error(err);
-      alert('❌ Gagal membuat kampanye.');
+    } catch (err: any) {
+      console.error('Error:', err);
+      alert(`❌ Gagal membuat campaign: ${err.message || err}`);
     } finally {
       setLoading(false);
     }
