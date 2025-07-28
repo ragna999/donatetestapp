@@ -36,7 +36,7 @@ export default function HomePage() {
     const fetchCampaigns = async () => {
       try {
         // ✅ Provider publik Sepolia (via Ankr)
-        const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia');
+        const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
 
         const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
         const addresses: string[] = await factory.getCampaigns();
