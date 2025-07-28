@@ -34,7 +34,9 @@ const CAMPAIGN_ABI = [
 ];
 
 export default function CampaignDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams();
+  const id = params.id as string;
+
   const [data, setData] = useState<any>(null);
   const [donationAmount, setDonationAmount] = useState('');
   const [currentAccount, setCurrentAccount] = useState('');
