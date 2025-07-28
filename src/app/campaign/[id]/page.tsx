@@ -62,7 +62,7 @@ export default function CampaignDetailPage() {
           setCurrentAccount(signerAddress);
         } else {
           console.log('🌐 Menggunakan RPC publik');
-          provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/YOUR_API_KEY');
+          provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
         }
 
         const campaign = new Contract(id, CAMPAIGN_ABI, provider);
