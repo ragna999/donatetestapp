@@ -82,16 +82,18 @@ export default function CampaignDetailPage() {
       console.log('✅ Data campaign berhasil diambil');
 
       setData({
-        title,
-        description,
-        goal: ethers.formatEther(goal),
-        raised: ethers.formatEther(totalDonated),
-        creator,
-        donations: donations.map((d: any) => ({
-          donor: d.donor,
-          amount: ethers.formatEther(d.amount),
-        })),
-      });
+  title,
+  description,
+  goal: ethers.formatEther(goal),
+  raised: ethers.formatEther(totalDonated),
+  creator,
+  banner: '', // ✅ tambahkan properti ini biar aman
+  donations: donations.map((d: any) => ({
+    donor: d.donor,
+    amount: ethers.formatEther(d.amount),
+  })),
+});
+
 
       if (signerAddress) {
         setIsOwner(signerAddress.toLowerCase() === creator.toLowerCase());
