@@ -35,7 +35,11 @@ const CAMPAIGN_ABI = [
 
 export default function CampaignDetailPage() {
   const params = useParams();
-  const id = params.id as string;
+  const id = params?.id as string;
+
+  if (!id || !ethers.isAddress(id)) {
+  return <p className="p-6 text-red-600">❌ Alamat campaign tidak valid.</p>;
+  }
 
   const [data, setData] = useState<any>(null);
   const [donationAmount, setDonationAmount] = useState('');
