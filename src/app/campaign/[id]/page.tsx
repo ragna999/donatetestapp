@@ -29,6 +29,21 @@ const CAMPAIGN_ABI = [
   { name: 'withdraw', type: 'function', stateMutability: 'nonpayable', inputs: [], outputs: [] },
 ];
 
+// Helper provider function
+async function getProvider() {
+  if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
+    console.log('🦊 Menggunakan wallet');
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const signerAddress = await signer.getAddress();
+    return { provider, signerAddress };
+  } else {
+    console.log('🌐 Fallback ke RPC publik');
+    const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
+    return { provider, signerAddress: '' };
+  }
+}
+
 export default function CampaignDetailPage() {
   const params = useParams();
   const id = params?.id as string;
@@ -44,20 +59,7 @@ export default function CampaignDetailPage() {
         console.log('🚀 Fetching campaign:', id);
         if (!id || !ethers.isAddress(id)) return;
 
-        let provider: ethers.Provider;
-        let signerAddress = '';
-
-        const hasWallet = typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
-
-        if (hasWallet) {
-          const browserProvider = new ethers.BrowserProvider(window.ethereum!);
-          provider = browserProvider;
-          const signer = await browserProvider.getSigner();
-          signerAddress = await signer.getAddress();
-          setCurrentAccount(signerAddress);
-        } else {
-          provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
-        }
+        const { provider, signerAddress } = await getProvider();
 
         const contract = new Contract(id, CAMPAIGN_ABI, provider);
         const [title, description, goal, totalDonated, creator, donationsRaw] = await Promise.all([
@@ -69,10 +71,12 @@ export default function CampaignDetailPage() {
           contract.getDonations(),
         ]);
 
-        const donations = donationsRaw.map((d: any) => ({
-          donor: d.donor,
-          amount: ethers.formatEther(d.amount),
-        }));
+        const donations = Array.isArray(donationsRaw)
+          ? donationsRaw.map((d: any) => ({
+              donor: d.donor,
+              amount: ethers.formatEther(d.amount),
+            }))
+          : [];
 
         setData({
           title,
@@ -83,7 +87,8 @@ export default function CampaignDetailPage() {
           donations,
         });
 
-        if (signerAddress && creator) {
+        if (signerAddress) {
+          setCurrentAccount(signerAddress);
           setIsOwner(signerAddress.toLowerCase() === creator.toLowerCase());
         }
       } catch (err) {
@@ -129,10 +134,10 @@ export default function CampaignDetailPage() {
     }
   };
 
-  if (!data) return <p className="p-6">Loading campaign...</p>;
+  if (!data) return <p className="p-6 text-white">Loading campaign...</p>;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 max-w-3xl mx-auto text-gray-900" suppressHydrationWarning>
+    <div className="min-h-screen bg-black text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
       <img
         src={'https://placehold.co/600x300?text=Campaign'}
         alt="banner"
@@ -146,24 +151,24 @@ export default function CampaignDetailPage() {
         <p className="text-sm font-medium">
           {data.raised} ETH raised of {data.goal} ETH
         </p>
-        <div className="w-full bg-gray-200 h-2 rounded-full">
+        <div className="w-full bg-gray-700 h-2 rounded-full">
           <div
-            className="bg-green-500 h-full"
+            className="bg-green-400 h-full"
             style={{ width: `${(Number(data.raised) / Number(data.goal)) * 100}%` }}
           />
         </div>
       </div>
 
-      <p className="text-xs text-gray-600 mb-4">Address: {id}</p>
+      <p className="text-xs text-gray-400 mb-4">Address: {id}</p>
 
       {currentAccount && (
         <form onSubmit={handleDonate} className="mb-6">
-          <label className="block mb-1 text-sm text-gray-700">Jumlah Donasi (ETH)</label>
+          <label className="block mb-1 text-sm text-gray-300">Jumlah Donasi (ETH)</label>
           <input
             type="number"
             value={donationAmount}
             onChange={(e) => setDonationAmount(e.target.value)}
-            className="w-full px-4 py-2 border rounded mb-2"
+            className="w-full px-4 py-2 border rounded mb-2 text-black"
             placeholder="Masukkan jumlah"
           />
           <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
