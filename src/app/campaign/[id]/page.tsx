@@ -37,70 +37,57 @@ export default function CampaignDetailPage() {
   const [donationAmount, setDonationAmount] = useState('');
   const [currentAccount, setCurrentAccount] = useState('');
   const [isOwner, setIsOwner] = useState(false);
- 
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log('🚀 Mulai fetch detail campaign');
+        console.log('🚀 Fetching campaign:', id);
+        if (!id || !ethers.isAddress(id)) return;
 
-        if (!id || !ethers.isAddress(id)) {
-          console.error('❌ Alamat campaign tidak valid:', id);
-          return;
-        }
-
-        const hasWallet = typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
         let provider: ethers.Provider;
         let signerAddress = '';
 
+        const hasWallet = typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
+
         if (hasWallet) {
-          console.log('🦊 Menggunakan wallet sebagai provider');
           const browserProvider = new ethers.BrowserProvider(window.ethereum!);
           provider = browserProvider;
           const signer = await browserProvider.getSigner();
           signerAddress = await signer.getAddress();
           setCurrentAccount(signerAddress);
         } else {
-          console.log('🌐 Menggunakan RPC publik');
           provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
         }
 
-        const campaign = new Contract(id, CAMPAIGN_ABI, provider);
-
+        const contract = new Contract(id, CAMPAIGN_ABI, provider);
         const [title, description, goal, totalDonated, creator, donationsRaw] = await Promise.all([
-          campaign.title(),
-          campaign.description(),
-          campaign.goal(),
-          campaign.totalDonated(),
-          campaign.creator(),
-          campaign.getDonations(),
+          contract.title(),
+          contract.description(),
+          contract.goal(),
+          contract.totalDonated(),
+          contract.creator(),
+          contract.getDonations(),
         ]);
 
-        const donations = Array.isArray(donationsRaw)
-          ? donationsRaw.map((d: any) => ({
-              donor: d.donor,
-              amount: ethers.formatEther(d.amount),
-            }))
-          : [];
+        const donations = donationsRaw.map((d: any) => ({
+          donor: d.donor,
+          amount: ethers.formatEther(d.amount),
+        }));
 
-        const campaignData = {
+        setData({
           title,
           description,
           goal: ethers.formatEther(goal),
           raised: ethers.formatEther(totalDonated),
           creator,
-          banner: '',
           donations,
-        };
+        });
 
-        setData(campaignData);
-        
-
-        if (signerAddress) {
+        if (signerAddress && creator) {
           setIsOwner(signerAddress.toLowerCase() === creator.toLowerCase());
         }
       } catch (err) {
-        console.error('❌ Gagal ambil detail campaign:', err);
+        console.error('❌ Error fetching campaign detail:', err);
       }
     };
 
@@ -120,7 +107,7 @@ export default function CampaignDetailPage() {
       await tx.wait();
       window.location.reload();
     } catch (err) {
-      alert('Donasi gagal.');
+      alert('Donasi gagal');
       console.error(err);
     }
   };
@@ -137,18 +124,17 @@ export default function CampaignDetailPage() {
       await tx.wait();
       window.location.reload();
     } catch (err) {
-      alert('Withdraw gagal.');
+      alert('Withdraw gagal');
       console.error(err);
     }
   };
 
-  if (!data) return <p className="p-6">Loading...</p>;
-
+  if (!data) return <p className="p-6">Loading campaign...</p>;
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-gray-100 p-6 max-w-3xl mx-auto text-gray-900">
+    <div className="min-h-screen bg-gray-100 p-6 max-w-3xl mx-auto text-gray-900" suppressHydrationWarning>
       <img
-        src={data.banner || 'https://placehold.co/600x300?text=No+Image'}
+        src={'https://placehold.co/600x300?text=Campaign'}
         alt="banner"
         className="w-full h-64 object-cover rounded mb-6"
       />
@@ -164,21 +150,21 @@ export default function CampaignDetailPage() {
           <div
             className="bg-green-500 h-full"
             style={{ width: `${(Number(data.raised) / Number(data.goal)) * 100}%` }}
-          ></div>
+          />
         </div>
       </div>
 
-      <p className="text-xs text-gray-600 mb-4">Campaign Address: {id}</p>
+      <p className="text-xs text-gray-600 mb-4">Address: {id}</p>
 
       {currentAccount && (
-  <form onSubmit={handleDonate}>
+        <form onSubmit={handleDonate} className="mb-6">
           <label className="block mb-1 text-sm text-gray-700">Jumlah Donasi (ETH)</label>
           <input
             type="number"
             value={donationAmount}
             onChange={(e) => setDonationAmount(e.target.value)}
             className="w-full px-4 py-2 border rounded mb-2"
-            placeholder="Masukkan jumlah donasi"
+            placeholder="Masukkan jumlah"
           />
           <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
             Donasi Sekarang
@@ -195,8 +181,8 @@ export default function CampaignDetailPage() {
       <div>
         <h2 className="text-lg font-semibold mb-2">Riwayat Donasi</h2>
         <ul className="space-y-2">
-          {data.donations.map((d: any, idx: number) => (
-            <li key={idx} className="flex justify-between bg-white p-3 rounded shadow text-gray-800">
+          {data.donations.map((d: any, i: number) => (
+            <li key={i} className="flex justify-between bg-white p-3 rounded shadow text-gray-800">
               <span>{d.donor.slice(0, 6)}...{d.donor.slice(-4)}</span>
               <span>{d.amount} ETH</span>
             </li>
