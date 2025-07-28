@@ -11,12 +11,22 @@ const CAMPAIGN_ABI = [
   { name: 'totalDonated', outputs: [{ type: 'uint256' }], stateMutability: 'view', type: 'function', inputs: [] },
   { name: 'owner', outputs: [{ type: 'address' }], stateMutability: 'view', type: 'function', inputs: [] },
   {
-    name: 'getDonations',
-    outputs: [{ type: 'tuple[]', components: [{ name: 'donor', type: 'address' }, { name: 'amount', type: 'uint256' }] }],
-    stateMutability: 'view',
-    type: 'function',
-    inputs: [],
-  },
+  name: 'getDonations',
+  type: 'function',
+  stateMutability: 'view',
+  inputs: [],
+  outputs: [
+    {
+      name: '',
+      type: 'tuple[]',
+      components: [
+        { name: 'donor', type: 'address' },
+        { name: 'amount', type: 'uint256' },
+      ],
+    },
+  ],
+},
+
   {
     name: 'donate',
     stateMutability: 'payable',
@@ -171,4 +181,11 @@ export default function CampaignDetailPage() {
       </div>
     </div>
   );
+}
+
+//test debug
+try {
+  // semua fetch Promise di sini
+} catch (err) {
+  console.error('❌ Gagal fetch campaign data:', err);
 }
