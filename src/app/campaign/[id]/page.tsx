@@ -37,6 +37,7 @@ async function getProvider() {
     const signer = await provider.getSigner();
     const signerAddress = await signer.getAddress();
     return { provider, signerAddress };
+
   } else {
     console.log('🌐 Fallback ke RPC publik');
     const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
@@ -134,7 +135,11 @@ export default function CampaignDetailPage() {
     }
   };
 
-  if (!data) return <p className="p-6 text-white">Loading campaign...</p>;
+  if (!data) {
+  console.log('📭 Data masih null');
+  return <p className="p-6">Loading campaign...</p>;
+}
+
 
   return (
     <div className="min-h-screen bg-black text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
