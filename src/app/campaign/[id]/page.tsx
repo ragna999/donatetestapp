@@ -30,14 +30,9 @@ const CAMPAIGN_ABI = [
   { name: 'withdraw', type: 'function', stateMutability: 'nonpayable', inputs: [], outputs: [] },
 ];
 
-
 export default function CampaignDetailPage() {
   const params = useParams();
   const id = params?.id as string;
-
-  if (!id || !ethers.isAddress(id)) {
-  return <p className="p-6 text-red-600">❌ Alamat campaign tidak valid.</p>;
-  }
 
   const [data, setData] = useState<any>(null);
   const [donationAmount, setDonationAmount] = useState('');
@@ -46,38 +41,52 @@ export default function CampaignDetailPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!window.ethereum) return;
+      try {
+        if (!id || !ethers.isAddress(id)) return;
 
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const userAddress = await signer.getAddress();
-      setCurrentAccount(userAddress);
+        let provider: ethers.Provider;
+        let signerAddress = '';
 
-      const campaign = new Contract(id, CAMPAIGN_ABI, provider);
+        const hasWallet = typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
 
-      const [title, description, goal, totalDonated, creator, donations] = await Promise.all([
-  campaign.title(),
-  campaign.description(),
-  campaign.goal(),
-  campaign.totalDonated(),
-  campaign.creator(),      // ✅ FIXED
-  campaign.getDonations(),
-]);
+        if (typeof window !== 'undefined' && window.ethereum) {
+        const browserProvider = new ethers.BrowserProvider(window.ethereum);
+        provider = browserProvider;
+        const signer = await browserProvider.getSigner();
+        signerAddress = await signer.getAddress();
+        }
+         else {
+          provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'); // ganti API KEY
+        }
 
+        const campaign = new Contract(id, CAMPAIGN_ABI, provider);
+        const [title, description, goal, totalDonated, creator, donations] = await Promise.all([
+          campaign.title(),
+          campaign.description(),
+          campaign.goal(),
+          campaign.totalDonated(),
+          campaign.creator(),
+          campaign.getDonations(),
+        ]);
 
-      setData({
-        title,
-        description,
-        goal: ethers.formatEther(goal),
-        raised: ethers.formatEther(totalDonated),
-        creator,
-        donations: donations.map((d: any) => ({
-          donor: d.donor,
-          amount: ethers.formatEther(d.amount),
-        })),
-      });
+        setData({
+          title,
+          description,
+          goal: ethers.formatEther(goal),
+          raised: ethers.formatEther(totalDonated),
+          creator,
+          donations: donations.map((d: any) => ({
+            donor: d.donor,
+            amount: ethers.formatEther(d.amount),
+          })),
+        });
 
-      setIsOwner(userAddress.toLowerCase() === creator.toLowerCase());
+        if (signerAddress) {
+          setIsOwner(signerAddress.toLowerCase() === creator.toLowerCase());
+        }
+      } catch (err) {
+        console.error('❌ Gagal ambil detail campaign:', err);
+      }
     };
 
     fetchData();
@@ -94,7 +103,7 @@ export default function CampaignDetailPage() {
     try {
       const tx = await contract.donate({ value: ethers.parseEther(donationAmount) });
       await tx.wait();
-      window.location.reload(); // simple refresh
+      window.location.reload();
     } catch (err) {
       alert('Donasi gagal.');
       console.error(err);
@@ -131,25 +140,30 @@ export default function CampaignDetailPage() {
           {data.raised} ETH raised of {data.goal} ETH
         </p>
         <div className="w-full bg-gray-200 h-2 rounded-full">
-          <div className="bg-green-500 h-2 rounded-full" style={{ width: `${(Number(data.raised) / Number(data.goal)) * 100}%` }}></div>
+          <div
+            className="bg-green-500 h-full"
+            style={{ width: `${(Number(data.raised) / Number(data.goal)) * 100}%` }}
+          ></div>
         </div>
       </div>
 
       <p className="text-xs text-gray-600 mb-4">Campaign Address: {id}</p>
 
-      <form onSubmit={handleDonate} className="mb-6">
-        <label className="block mb-1 text-sm text-gray-700">Jumlah Donasi (ETH)</label>
-        <input
-          type="number"
-          value={donationAmount}
-          onChange={(e) => setDonationAmount(e.target.value)}
-          className="w-full px-4 py-2 border rounded mb-2"
-          placeholder="Masukkan jumlah donasi"
-        />
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-          Donasi Sekarang
-        </button>
-      </form>
+      {typeof window !== 'undefined' && window.ethereum && (
+        <form onSubmit={handleDonate} className="mb-6">
+          <label className="block mb-1 text-sm text-gray-700">Jumlah Donasi (ETH)</label>
+          <input
+            type="number"
+            value={donationAmount}
+            onChange={(e) => setDonationAmount(e.target.value)}
+            className="w-full px-4 py-2 border rounded mb-2"
+            placeholder="Masukkan jumlah donasi"
+          />
+          <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            Donasi Sekarang
+          </button>
+        </form>
+      )}
 
       {isOwner && (
         <button onClick={handleWithdraw} className="mb-6 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
@@ -170,11 +184,4 @@ export default function CampaignDetailPage() {
       </div>
     </div>
   );
-}
-
-//test debug
-try {
-  // semua fetch Promise di sini
-} catch (err) {
-  console.error('❌ Gagal fetch campaign data:', err);
 }
