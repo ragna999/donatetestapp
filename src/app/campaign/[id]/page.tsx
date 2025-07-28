@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ethers, Contract } from 'ethers';
 
-const CAMPAIGN_ABI = [
+const FACTORY_ABI = [
   { name: 'title', outputs: [{ type: 'string' }], stateMutability: 'view', type: 'function', inputs: [] },
   { name: 'description', outputs: [{ type: 'string' }], stateMutability: 'view', type: 'function', inputs: [] },
   { name: 'goal', outputs: [{ type: 'uint256' }], stateMutability: 'view', type: 'function', inputs: [] },
@@ -49,7 +49,7 @@ export default function CampaignDetailPage() {
       const userAddress = await signer.getAddress();
       setCurrentAccount(userAddress);
 
-      const campaign = new Contract(id, CAMPAIGN_ABI, provider);
+      const campaign = new Contract(id, FACTORY_ABI, provider);
 
       const [title, description, goal, totalDonated, owner, donations] = await Promise.all([
         campaign.title(),
@@ -84,7 +84,7 @@ export default function CampaignDetailPage() {
 
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
-    const contract = new Contract(id, CAMPAIGN_ABI, signer);
+    const contract = new Contract(id, FACTORY_ABI, signer);
 
     try {
       const tx = await contract.donate({ value: ethers.parseEther(donationAmount) });
@@ -101,7 +101,7 @@ export default function CampaignDetailPage() {
 
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
-    const contract = new Contract(id, CAMPAIGN_ABI, signer);
+    const contract = new Contract(id, FACTORY_ABI, signer);
 
     try {
       const tx = await contract.withdraw();
