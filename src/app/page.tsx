@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { ethers, Contract } from 'ethers';
+import Link from 'next/link';
 
 type CampaignData = {
   address: string;
@@ -13,97 +14,99 @@ type CampaignData = {
 const FACTORY_ADDRESS = '0xe35C7c9fcBd477fb34B612f71361dB0f8cE84C9C';
 const FACTORY_ABI = [
   {
-    "inputs": [],
-    "name": "getCampaigns",
-    "outputs": [{ "internalType": "address[]", "name": "", "type": "address[]" }],
-    "stateMutability": "view",
-    "type": "function"
-  }
+    inputs: [],
+    name: 'getCampaigns',
+    outputs: [{ internalType: 'address[]', name: '', type: 'address[]' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
 ];
 
 const CAMPAIGN_ABI = [
-  { "inputs": [], "name": "title", "outputs": [{ "internalType": "string", "name": "", "type": "string" }], "stateMutability": "view", "type": "function" },
-  { "inputs": [], "name": "description", "outputs": [{ "internalType": "string", "name": "", "type": "string" }], "stateMutability": "view", "type": "function" },
-  { "inputs": [], "name": "goal", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
-  {
-  "inputs": [],
-  "name": "totalDonated",
-  "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-  "stateMutability": "view",
-  "type": "function"
-}
-
+  { inputs: [], name: 'title', outputs: [{ internalType: 'string', name: '', type: 'string' }], stateMutability: 'view', type: 'function' },
+  { inputs: [], name: 'description', outputs: [{ internalType: 'string', name: '', type: 'string' }], stateMutability: 'view', type: 'function' },
+  { inputs: [], name: 'goal', outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }], stateMutability: 'view', type: 'function' },
+  { inputs: [], name: 'totalDonated', outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }], stateMutability: 'view', type: 'function' },
 ];
 
 export default function HomePage() {
   const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
 
- useEffect(() => {
-  const fetchCampaigns = async () => {
-    if (typeof window.ethereum === 'undefined') return;
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      if (typeof window.ethereum === 'undefined') return;
 
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
 
-    const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
-    const addresses: string[] = await factory.getCampaigns();
+      const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
+      const addresses: string[] = await factory.getCampaigns();
 
-    console.log('📦 Daftar alamat campaign:', addresses); // <- log alamat duluan
+      const details = await Promise.all(
+        addresses.map(async (addr) => {
+          const campaign = new Contract(addr, CAMPAIGN_ABI, provider);
+          const [title, description, goal, totalDonated] = await Promise.all([
+            campaign.title(),
+            campaign.description(),
+            campaign.goal(),
+            campaign.totalDonated(),
+          ]);
 
-    const details = await Promise.all(
-      addresses.map(async (addr) => {
-        const campaign = new Contract(addr, CAMPAIGN_ABI, provider);
-        const [title, description, goal, totalDonated] = await Promise.all([
-          campaign.title(),
-          campaign.description(),
-          campaign.goal(),
-          campaign.totalDonated()
-        ]);
+          return {
+            address: addr,
+            title,
+            description,
+            goal: ethers.formatEther(goal),
+            raised: ethers.formatEther(totalDonated),
+          };
+        })
+      );
 
-        return {
-          address: addr,
-          title,
-          description,
-          goal: ethers.formatEther(goal),
-          raised: ethers.formatEther(totalDonated),
-        };
-      })
-    );
+      setCampaigns(details);
+    };
 
-    console.log('📊 Detail campaign:', details); // <- log hasil parsing
-
-    setCampaigns(details);
-  };
-
-  fetchCampaigns();
-}, []);
-
+    fetchCampaigns();
+  }, []);
 
   return (
-  <div className="p-6">
-    <h1 className="text-2xl font-bold mb-4">Campaigns</h1>
+    <main className="min-h-screen bg-black text-white py-10 px-6">
+      <h1 className="text-3xl font-bold mb-8">Campaigns</h1>
 
-    {campaigns.length === 0 ? (
-      <p className="text-gray-500">Belum ada kampanye yang aktif.</p>
-    ) : (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {campaigns.map((c) => (
-          <div key={c.address} className="border p-4 rounded bg-white shadow">
-            <h2 className="text-lg font-semibold mb-1">{c.title}</h2>
-            <p className="text-sm text-gray-600 mb-2">{c.description}</p>
-            <p className="text-sm">{c.raised} ETH raised of {c.goal} ETH</p>
-            <div className="w-full bg-gray-200 h-2 rounded-full my-2">
-              <div
-                className="bg-green-500 h-2 rounded-full"
-                style={{ width: `${(Number(c.raised) / Number(c.goal)) * 100}%` }}
-              ></div>
+      {campaigns.length === 0 ? (
+        <p className="text-gray-400">Belum ada kampanye yang aktif.</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {campaigns.map((c) => (
+            <div
+              key={c.address}
+              className="bg-white text-black p-5 rounded-2xl shadow-lg hover:scale-[1.02] transition"
+            >
+              <h2 className="text-xl font-bold mb-1">{c.title}</h2>
+              <p className="text-sm text-gray-600 mb-3 line-clamp-2">{c.description}</p>
+
+              <div className="mb-2">
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="bg-green-500 h-full"
+                    style={{ width: `${(Number(c.raised) / Number(c.goal)) * 100}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-700 mt-1">
+                  {c.raised} ETH raised of {c.goal} ETH
+                </p>
+              </div>
+
+              <p className="text-xs text-gray-400 truncate">{c.address}</p>
+
+              <Link href={`/campaign/${c.address}`} className="block mt-4">
+                <button className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 text-sm">
+                  Lihat Detail
+                </button>
+              </Link>
             </div>
-            <p className="text-xs text-gray-500 break-all">{c.address}</p>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-);
-
+          ))}
+        </div>
+      )}
+    </main>
+  );
 }
