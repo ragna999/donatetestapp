@@ -40,57 +40,70 @@ export default function CampaignDetailPage() {
   const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (!id || !ethers.isAddress(id)) return;
+  const fetchData = async () => {
+    try {
+      console.log('🚀 Mulai fetch detail campaign');
 
-        let provider: ethers.Provider;
-        let signerAddress = '';
+      if (!id || !ethers.isAddress(id)) {
+        console.error('❌ Alamat campaign tidak valid:', id);
+        return;
+      }
 
-        const hasWallet = typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
+      let provider: ethers.Provider;
+      let signerAddress = '';
 
-        if (typeof window !== 'undefined' && window.ethereum) {
-        const browserProvider = new ethers.BrowserProvider(window.ethereum);
+      const hasWallet = typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
+
+      if (hasWallet) {
+        console.log('🦊 Menggunakan wallet sebagai provider');
+        const browserProvider = new ethers.BrowserProvider(window.ethereum!);
         provider = browserProvider;
         const signer = await browserProvider.getSigner();
         signerAddress = await signer.getAddress();
-        }
-         else {
-          provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'); // ganti API KEY
-        }
-
-        const campaign = new Contract(id, CAMPAIGN_ABI, provider);
-        const [title, description, goal, totalDonated, creator, donations] = await Promise.all([
-          campaign.title(),
-          campaign.description(),
-          campaign.goal(),
-          campaign.totalDonated(),
-          campaign.creator(),
-          campaign.getDonations(),
-        ]);
-
-        setData({
-          title,
-          description,
-          goal: ethers.formatEther(goal),
-          raised: ethers.formatEther(totalDonated),
-          creator,
-          donations: donations.map((d: any) => ({
-            donor: d.donor,
-            amount: ethers.formatEther(d.amount),
-          })),
-        });
-
-        if (signerAddress) {
-          setIsOwner(signerAddress.toLowerCase() === creator.toLowerCase());
-        }
-      } catch (err) {
-        console.error('❌ Gagal ambil detail campaign:', err);
+        setCurrentAccount(signerAddress);
+      } else {
+        console.log('🌐 Menggunakan RPC publik');
+        provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/YOUR_API_KEY');
       }
-    };
 
-    fetchData();
-  }, [id]);
+      console.log('🔗 Membuat contract...');
+      const campaign = new Contract(id, CAMPAIGN_ABI, provider);
+
+      console.log('📥 Ambil data dari smart contract...');
+      const [title, description, goal, totalDonated, creator, donations] = await Promise.all([
+        campaign.title(),
+        campaign.description(),
+        campaign.goal(),
+        campaign.totalDonated(),
+        campaign.creator(),
+        campaign.getDonations(),
+      ]);
+
+      console.log('✅ Data campaign berhasil diambil');
+
+      setData({
+        title,
+        description,
+        goal: ethers.formatEther(goal),
+        raised: ethers.formatEther(totalDonated),
+        creator,
+        donations: donations.map((d: any) => ({
+          donor: d.donor,
+          amount: ethers.formatEther(d.amount),
+        })),
+      });
+
+      if (signerAddress) {
+        setIsOwner(signerAddress.toLowerCase() === creator.toLowerCase());
+      }
+    } catch (err) {
+      console.error('❌ Gagal ambil detail campaign:', err);
+    }
+  };
+
+  fetchData();
+}, [id]);
+
 
   const handleDonate = async (e: React.FormEvent) => {
     e.preventDefault();
