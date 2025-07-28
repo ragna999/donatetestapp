@@ -144,7 +144,13 @@ export default function CampaignDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-6 max-w-3xl mx-auto text-gray-900">
-      <img src={`https://via.placeholder.com/600x300`} alt="banner" className="w-full h-64 object-cover rounded mb-6" />
+      <img
+  src={data.banner || 'https://placehold.co/600x300?text=No+Banner'}
+  alt="banner"
+  className="w-full h-64 object-cover rounded mb-6"
+/>
+
+
       <h1 className="text-2xl font-bold mb-2">{data.title}</h1>
       <p className="mb-4">{data.description}</p>
 
