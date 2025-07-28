@@ -5,11 +5,11 @@ import { useParams } from 'next/navigation';
 import { ethers, Contract } from 'ethers';
 
 const CAMPAIGN_ABI = [
-  { name: 'title', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'string' }] },
-  { name: 'description', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'string' }] },
-  { name: 'goal', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'uint256' }] },
-  { name: 'totalDonated', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'uint256' }] },
-  { name: 'creator', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'address' }] },
+  { name: 'title', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
+  { name: 'description', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
+  { name: 'goal', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+  { name: 'totalDonated', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+  { name: 'creator', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] },
   {
     name: 'getDonations',
     type: 'function',
@@ -17,7 +17,6 @@ const CAMPAIGN_ABI = [
     inputs: [],
     outputs: [
       {
-        name: '',
         type: 'tuple[]',
         components: [
           { name: 'donor', type: 'address' },
@@ -38,6 +37,7 @@ export default function CampaignDetailPage() {
   const [donationAmount, setDonationAmount] = useState('');
   const [currentAccount, setCurrentAccount] = useState('');
   const [isOwner, setIsOwner] = useState(false);
+  const [renderKey, setRenderKey] = useState(0); // ✅ ini DI LUAR useEffect
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,10 +49,9 @@ export default function CampaignDetailPage() {
           return;
         }
 
+        const hasWallet = typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
         let provider: ethers.Provider;
         let signerAddress = '';
-
-        const hasWallet = typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
 
         if (hasWallet) {
           console.log('🦊 Menggunakan wallet sebagai provider');
@@ -66,10 +65,8 @@ export default function CampaignDetailPage() {
           provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/YOUR_API_KEY');
         }
 
-        console.log('🔗 Membuat contract...');
         const campaign = new Contract(id, CAMPAIGN_ABI, provider);
 
-        console.log('📥 Ambil data dari smart contract...');
         const [title, description, goal, totalDonated, creator, donationsRaw] = await Promise.all([
           campaign.title(),
           campaign.description(),
@@ -92,13 +89,12 @@ export default function CampaignDetailPage() {
           goal: ethers.formatEther(goal),
           raised: ethers.formatEther(totalDonated),
           creator,
-          banner: '', // amanin image
+          banner: '',
           donations,
         };
 
-        console.log('📦 Data siap untuk render:', campaignData);
-
         setData(campaignData);
+        setRenderKey((prev) => prev + 1); // ✅ trigger render ulang
 
         if (signerAddress) {
           setIsOwner(signerAddress.toLowerCase() === creator.toLowerCase());
@@ -146,10 +142,10 @@ export default function CampaignDetailPage() {
     }
   };
 
-  if (!data) return <p className="p-6">Loading...</p>;
+  if (!data || renderKey === 0) return <p className="p-6">Loading...</p>;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 max-w-3xl mx-auto text-gray-900">
+    <div suppressHydrationWarning className="min-h-screen bg-gray-100 p-6 max-w-3xl mx-auto text-gray-900">
       <img
         src={data.banner || 'https://placehold.co/600x300?text=No+Image'}
         alt="banner"
