@@ -55,28 +55,29 @@ export default function CampaignDetailPage() {
 
       const campaign = new Contract(id, CAMPAIGN_ABI, provider);
 
-      const [title, description, goal, totalDonated, owner, donations] = await Promise.all([
-        campaign.title(),
-        campaign.description(),
-        campaign.goal(),
-        campaign.totalDonated(),
-        campaign.owner(),
-        campaign.getDonations(),
-      ]);
+      const [title, description, goal, totalDonated, creator, donations] = await Promise.all([
+  campaign.title(),
+  campaign.description(),
+  campaign.goal(),
+  campaign.totalDonated(),
+  campaign.creator(),      // ✅ FIXED
+  campaign.getDonations(),
+]);
+
 
       setData({
         title,
         description,
         goal: ethers.formatEther(goal),
         raised: ethers.formatEther(totalDonated),
-        owner,
+        creator,
         donations: donations.map((d: any) => ({
           donor: d.donor,
           amount: ethers.formatEther(d.amount),
         })),
       });
 
-      setIsOwner(userAddress.toLowerCase() === owner.toLowerCase());
+      setIsOwner(userAddress.toLowerCase() === creator.toLowerCase());
     };
 
     fetchData();
