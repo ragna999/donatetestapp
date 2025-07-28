@@ -29,46 +29,45 @@ const CAMPAIGN_ABI = [
   { name: 'withdraw', type: 'function', stateMutability: 'nonpayable', inputs: [], outputs: [] },
 ];
 
-// Helper provider function
-async function getProvider() {
-  if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
-    console.log('🦊 Detected wallet');
-
-    // safer way to check connection
-    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-    if (accounts.length === 0) {
-      console.warn('⚠️ Wallet belum connect');
-    }
-
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-    const signerAddress = await signer.getAddress();
-    return { provider, signerAddress };
-  } else {
-    console.log('🌐 Fallback ke RPC publik');
-    const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
-    return { provider, signerAddress: '' };
-  }
-}
-
-
 export default function CampaignDetailPage() {
   const params = useParams();
   const id = params?.id as string;
 
+  const [hydrated, setHydrated] = useState(false);
   const [data, setData] = useState<any>(null);
   const [donationAmount, setDonationAmount] = useState('');
   const [currentAccount, setCurrentAccount] = useState('');
   const [isOwner, setIsOwner] = useState(false);
-  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true); // ✅ pastiin render udah client
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log('🚀 Fetching campaign:', id);
         if (!id || !ethers.isAddress(id)) return;
 
-        const { provider, signerAddress } = await getProvider();
+        let provider: ethers.Provider;
+let signerAddress = '';
+
+if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
+  console.log('🦊 Menggunakan wallet');
+  const browserProvider = new ethers.BrowserProvider(window.ethereum);
+  provider = browserProvider;
+
+  try {
+    const signer = await browserProvider.getSigner();
+    signerAddress = await signer.getAddress();
+    setCurrentAccount(signerAddress);
+  } catch {
+    console.warn('⚠️ Wallet belum connect saat fetch');
+  }
+} else {
+  console.log('🌐 Fallback ke RPC publik');
+  provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
+}
+
 
         const contract = new Contract(id, CAMPAIGN_ABI, provider);
         const [title, description, goal, totalDonated, creator, donationsRaw] = await Promise.all([
@@ -80,12 +79,10 @@ export default function CampaignDetailPage() {
           contract.getDonations(),
         ]);
 
-        const donations = Array.isArray(donationsRaw)
-          ? donationsRaw.map((d: any) => ({
-              donor: d.donor,
-              amount: ethers.formatEther(d.amount),
-            }))
-          : [];
+        const donations = donationsRaw.map((d: any) => ({
+          donor: d.donor,
+          amount: ethers.formatEther(d.amount),
+        }));
 
         setData({
           title,
@@ -96,20 +93,19 @@ export default function CampaignDetailPage() {
           donations,
         });
 
-        setReady(true); // ✅ Tambahin ini setelah setData
-
-
-        if (signerAddress) {
-          setCurrentAccount(signerAddress);
+        if (signerAddress && creator) {
           setIsOwner(signerAddress.toLowerCase() === creator.toLowerCase());
         }
+
       } catch (err) {
-        console.error('❌ Error fetching campaign detail:', err);
+        console.error('❌ Gagal fetch campaign:', err);
       }
     };
 
-    fetchData();
-  }, [id]);
+    if (hydrated) {
+      fetchData();
+    }
+  }, [id, hydrated]);
 
   const handleDonate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,7 +120,7 @@ export default function CampaignDetailPage() {
       await tx.wait();
       window.location.reload();
     } catch (err) {
-      alert('Donasi gagal');
+      alert('Donasi gagal.');
       console.error(err);
     }
   };
@@ -141,15 +137,12 @@ export default function CampaignDetailPage() {
       await tx.wait();
       window.location.reload();
     } catch (err) {
-      alert('Withdraw gagal');
+      alert('Withdraw gagal.');
       console.error(err);
     }
-    
   };
 
-if (!ready) return <p className="p-6">Loading campaign...</p>;
-
-
+  if (!hydrated || !data) return <p className="p-6">Loading...</p>;
 
   return (
     <div className="min-h-screen bg-black text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
