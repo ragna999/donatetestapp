@@ -5,43 +5,71 @@ import { useParams } from 'next/navigation';
 import { ethers, Contract } from 'ethers';
 
 const CAMPAIGN_ABI = [
-  { name: 'title', outputs: [{ type: 'string' }], stateMutability: 'view', type: 'function', inputs: [] },
-  { name: 'description', outputs: [{ type: 'string' }], stateMutability: 'view', type: 'function', inputs: [] },
-  { name: 'goal', outputs: [{ type: 'uint256' }], stateMutability: 'view', type: 'function', inputs: [] },
-  { name: 'totalDonated', outputs: [{ type: 'uint256' }], stateMutability: 'view', type: 'function', inputs: [] },
-  { name: 'owner', outputs: [{ type: 'address' }], stateMutability: 'view', type: 'function', inputs: [] },
   {
-  name: 'getDonations',
-  type: 'function',
-  stateMutability: 'view',
-  inputs: [],
-  outputs: [
-    {
-      name: '',
-      type: 'tuple[]',
-      components: [
-        { name: 'donor', type: 'address' },
-        { name: 'amount', type: 'uint256' },
-      ],
-    },
-  ],
-},
-
+    name: 'title',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'string' }],
+  },
+  {
+    name: 'description',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'string' }],
+  },
+  {
+    name: 'goal',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'totalDonated',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'creator',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'address' }],
+  },
   {
     name: 'donate',
-    stateMutability: 'payable',
     type: 'function',
+    stateMutability: 'payable',
     inputs: [],
     outputs: [],
   },
   {
     name: 'withdraw',
-    stateMutability: 'nonpayable',
     type: 'function',
+    stateMutability: 'nonpayable',
     inputs: [],
     outputs: [],
   },
+  {
+    name: 'getBalance',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'donations',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: '', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
 ];
+
 
 export default function CampaignDetailPage() {
   const params = useParams();
