@@ -32,18 +32,25 @@ const CAMPAIGN_ABI = [
 // Helper provider function
 async function getProvider() {
   if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
-    console.log('🦊 Menggunakan wallet');
+    console.log('🦊 Detected wallet');
+
+    // safer way to check connection
+    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+    if (accounts.length === 0) {
+      console.warn('⚠️ Wallet belum connect');
+    }
+
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
     const signerAddress = await signer.getAddress();
     return { provider, signerAddress };
-
   } else {
     console.log('🌐 Fallback ke RPC publik');
     const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
     return { provider, signerAddress: '' };
   }
 }
+
 
 export default function CampaignDetailPage() {
   const params = useParams();
