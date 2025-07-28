@@ -33,41 +33,22 @@ export default function CampaignDetailPage() {
   const params = useParams();
   const id = params?.id as string;
 
-  const [hydrated, setHydrated] = useState(false);
   const [data, setData] = useState<any>(null);
   const [donationAmount, setDonationAmount] = useState('');
   const [currentAccount, setCurrentAccount] = useState('');
   const [isOwner, setIsOwner] = useState(false);
-
-  useEffect(() => {
-    setHydrated(true); // ✅ pastiin render udah client
-  }, []);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log('🚀 Fetching campaign:', id);
         if (!id || !ethers.isAddress(id)) return;
 
-        let provider: ethers.Provider;
-let signerAddress = '';
-
-if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
-  console.log('🦊 Menggunakan wallet');
-  const browserProvider = new ethers.BrowserProvider(window.ethereum);
-  provider = browserProvider;
-
-  try {
-    const signer = await browserProvider.getSigner();
-    signerAddress = await signer.getAddress();
-    setCurrentAccount(signerAddress);
-  } catch {
-    console.warn('⚠️ Wallet belum connect saat fetch');
-  }
-} else {
-  console.log('🌐 Fallback ke RPC publik');
-  provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
-}
-
+        // 🔍 Gunakan read-only provider biar aman di DApp browser
+        const provider = new ethers.JsonRpcProvider(
+          'https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'
+        );
 
         const contract = new Contract(id, CAMPAIGN_ABI, provider);
         const [title, description, goal, totalDonated, creator, donationsRaw] = await Promise.all([
@@ -79,10 +60,12 @@ if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
           contract.getDonations(),
         ]);
 
-        const donations = donationsRaw.map((d: any) => ({
-          donor: d.donor,
-          amount: ethers.formatEther(d.amount),
-        }));
+        const donations = Array.isArray(donationsRaw)
+          ? donationsRaw.map((d: any) => ({
+              donor: d.donor,
+              amount: ethers.formatEther(d.amount),
+            }))
+          : [];
 
         setData({
           title,
@@ -93,19 +76,29 @@ if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
           donations,
         });
 
-        if (signerAddress && creator) {
-          setIsOwner(signerAddress.toLowerCase() === creator.toLowerCase());
-        }
+        setReady(true);
 
+        // Coba deteksi wallet (opsional, untuk tampilkan tombol withdraw)
+        if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
+          try {
+            const browserProvider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await browserProvider.getSigner();
+            const signerAddress = await signer.getAddress();
+            setCurrentAccount(signerAddress);
+            if (signerAddress.toLowerCase() === creator.toLowerCase()) {
+              setIsOwner(true);
+            }
+          } catch (e) {
+            console.warn('⚠️ Wallet belum connect, lanjut tanpa signer');
+          }
+        }
       } catch (err) {
-        console.error('❌ Gagal fetch campaign:', err);
+        console.error('❌ Error fetching campaign detail:', err);
       }
     };
 
-    if (hydrated) {
-      fetchData();
-    }
-  }, [id, hydrated]);
+    fetchData();
+  }, [id]);
 
   const handleDonate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,7 +113,7 @@ if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
       await tx.wait();
       window.location.reload();
     } catch (err) {
-      alert('Donasi gagal.');
+      alert('Donasi gagal');
       console.error(err);
     }
   };
@@ -137,12 +130,12 @@ if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
       await tx.wait();
       window.location.reload();
     } catch (err) {
-      alert('Withdraw gagal.');
+      alert('Withdraw gagal');
       console.error(err);
     }
   };
 
-  if (!hydrated || !data) return <p className="p-6">Loading...</p>;
+  if (!ready) return <p className="p-6">Loading campaign...</p>;
 
   return (
     <div className="min-h-screen bg-black text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
