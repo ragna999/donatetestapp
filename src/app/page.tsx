@@ -100,14 +100,22 @@ export default function HomePage() {
   const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
 
   useEffect(() => {
-    const fetchCampaigns = async () => {
-      if (typeof window.ethereum === 'undefined') return;
+  const fetchCampaigns = async () => {
+    if (typeof window.ethereum === 'undefined') {
+      console.warn('❌ Ethereum provider tidak tersedia');
+      return;
+    }
 
+    try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
+      const user = await signer.getAddress();
+      console.log('✅ Wallet:', user);
 
       const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
       const addresses: string[] = await factory.getCampaigns();
+
+      console.log('📦 Kampanye ditemukan:', addresses);
 
       const details = await Promise.all(
         addresses.map(async (addr) => {
@@ -129,11 +137,16 @@ export default function HomePage() {
         })
       );
 
+      console.log('🧾 Detail kampanye:', details);
       setCampaigns(details);
-    };
+    } catch (err) {
+      console.error('🔥 Gagal fetch campaign:', err);
+    }
+  };
 
-    fetchCampaigns();
-  }, []);
+  fetchCampaigns();
+}, []);
+
 
   return (
     <main className="min-h-screen bg-black text-white py-10 px-6">
