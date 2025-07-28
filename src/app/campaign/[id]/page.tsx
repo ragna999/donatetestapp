@@ -133,12 +133,14 @@ export default function CampaignDetailPage() {
       alert('Withdraw gagal');
       console.error(err);
     }
+    
   };
 
   if (!data) {
-  console.log('📭 Data masih null');
+  console.log('🧃 Data masih null');
   return <p className="p-6">Loading campaign...</p>;
 }
+console.log('📦 Data siap:', data);
 
 
   return (
