@@ -40,72 +40,76 @@ export default function CampaignDetailPage() {
   const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
-  const fetchData = async () => {
-    try {
-      console.log('🚀 Mulai fetch detail campaign');
+    const fetchData = async () => {
+      try {
+        console.log('🚀 Mulai fetch detail campaign');
 
-      if (!id || !ethers.isAddress(id)) {
-        console.error('❌ Alamat campaign tidak valid:', id);
-        return;
+        if (!id || !ethers.isAddress(id)) {
+          console.error('❌ Alamat campaign tidak valid:', id);
+          return;
+        }
+
+        let provider: ethers.Provider;
+        let signerAddress = '';
+
+        const hasWallet = typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
+
+        if (hasWallet) {
+          console.log('🦊 Menggunakan wallet sebagai provider');
+          const browserProvider = new ethers.BrowserProvider(window.ethereum!);
+          provider = browserProvider;
+          const signer = await browserProvider.getSigner();
+          signerAddress = await signer.getAddress();
+          setCurrentAccount(signerAddress);
+        } else {
+          console.log('🌐 Menggunakan RPC publik');
+          provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/YOUR_API_KEY');
+        }
+
+        console.log('🔗 Membuat contract...');
+        const campaign = new Contract(id, CAMPAIGN_ABI, provider);
+
+        console.log('📥 Ambil data dari smart contract...');
+        const [title, description, goal, totalDonated, creator, donationsRaw] = await Promise.all([
+          campaign.title(),
+          campaign.description(),
+          campaign.goal(),
+          campaign.totalDonated(),
+          campaign.creator(),
+          campaign.getDonations(),
+        ]);
+
+        const donations = Array.isArray(donationsRaw)
+          ? donationsRaw.map((d: any) => ({
+              donor: d.donor,
+              amount: ethers.formatEther(d.amount),
+            }))
+          : [];
+
+        const campaignData = {
+          title,
+          description,
+          goal: ethers.formatEther(goal),
+          raised: ethers.formatEther(totalDonated),
+          creator,
+          banner: '', // amanin image
+          donations,
+        };
+
+        console.log('📦 Data siap untuk render:', campaignData);
+
+        setData(campaignData);
+
+        if (signerAddress) {
+          setIsOwner(signerAddress.toLowerCase() === creator.toLowerCase());
+        }
+      } catch (err) {
+        console.error('❌ Gagal ambil detail campaign:', err);
       }
+    };
 
-      let provider: ethers.Provider;
-      let signerAddress = '';
-
-      const hasWallet = typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
-
-      if (hasWallet) {
-        console.log('🦊 Menggunakan wallet sebagai provider');
-        const browserProvider = new ethers.BrowserProvider(window.ethereum!);
-        provider = browserProvider;
-        const signer = await browserProvider.getSigner();
-        signerAddress = await signer.getAddress();
-        setCurrentAccount(signerAddress);
-      } else {
-        console.log('🌐 Menggunakan RPC publik');
-        provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/YOUR_API_KEY');
-      }
-
-      console.log('🔗 Membuat contract...');
-      const campaign = new Contract(id, CAMPAIGN_ABI, provider);
-
-      console.log('📥 Ambil data dari smart contract...');
-      const [title, description, goal, totalDonated, creator, donations] = await Promise.all([
-        campaign.title(),
-        campaign.description(),
-        campaign.goal(),
-        campaign.totalDonated(),
-        campaign.creator(),
-        campaign.getDonations(),
-      ]);
-
-      console.log('✅ Data campaign berhasil diambil');
-
-      setData({
-  title,
-  description,
-  goal: ethers.formatEther(goal),
-  raised: ethers.formatEther(totalDonated),
-  creator,
-  banner: '', // ✅ tambahkan properti ini biar aman
-  donations: donations.map((d: any) => ({
-    donor: d.donor,
-    amount: ethers.formatEther(d.amount),
-  })),
-});
-
-
-      if (signerAddress) {
-        setIsOwner(signerAddress.toLowerCase() === creator.toLowerCase());
-      }
-    } catch (err) {
-      console.error('❌ Gagal ambil detail campaign:', err);
-    }
-  };
-
-  fetchData();
-}, [id]);
-
+    fetchData();
+  }, [id]);
 
   const handleDonate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,11 +151,10 @@ export default function CampaignDetailPage() {
   return (
     <div className="min-h-screen bg-gray-100 p-6 max-w-3xl mx-auto text-gray-900">
       <img
-  src={data.banner || 'https://placehold.co/600x300?text=No+Banner'}
-  alt="banner"
-  className="w-full h-64 object-cover rounded mb-6"
-/>
-
+        src={data.banner || 'https://placehold.co/600x300?text=No+Image'}
+        alt="banner"
+        className="w-full h-64 object-cover rounded mb-6"
+      />
 
       <h1 className="text-2xl font-bold mb-2">{data.title}</h1>
       <p className="mb-4">{data.description}</p>
