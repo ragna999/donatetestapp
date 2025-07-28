@@ -37,7 +37,7 @@ export default function CampaignDetailPage() {
   const [donationAmount, setDonationAmount] = useState('');
   const [currentAccount, setCurrentAccount] = useState('');
   const [isOwner, setIsOwner] = useState(false);
-  const [renderKey, setRenderKey] = useState(0); // ✅ ini DI LUAR useEffect
+ 
 
   useEffect(() => {
     const fetchData = async () => {
@@ -94,7 +94,7 @@ export default function CampaignDetailPage() {
         };
 
         setData(campaignData);
-        setRenderKey((prev) => prev + 1); // ✅ trigger render ulang
+        
 
         if (signerAddress) {
           setIsOwner(signerAddress.toLowerCase() === creator.toLowerCase());
@@ -142,7 +142,8 @@ export default function CampaignDetailPage() {
     }
   };
 
-  if (!data || renderKey === 0) return <p className="p-6">Loading...</p>;
+  if (!data) return <p className="p-6">Loading...</p>;
+
 
   return (
     <div suppressHydrationWarning className="min-h-screen bg-gray-100 p-6 max-w-3xl mx-auto text-gray-900">
@@ -169,8 +170,8 @@ export default function CampaignDetailPage() {
 
       <p className="text-xs text-gray-600 mb-4">Campaign Address: {id}</p>
 
-      {typeof window !== 'undefined' && window.ethereum && (
-        <form onSubmit={handleDonate} className="mb-6">
+      {currentAccount && (
+  <form onSubmit={handleDonate}>
           <label className="block mb-1 text-sm text-gray-700">Jumlah Donasi (ETH)</label>
           <input
             type="number"
