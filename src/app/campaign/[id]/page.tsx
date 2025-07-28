@@ -53,6 +53,7 @@ export default function CampaignDetailPage() {
   const [donationAmount, setDonationAmount] = useState('');
   const [currentAccount, setCurrentAccount] = useState('');
   const [isOwner, setIsOwner] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -87,6 +88,9 @@ export default function CampaignDetailPage() {
           creator,
           donations,
         });
+
+        setReady(true); // ✅ Tambahin ini setelah setData
+
 
         if (signerAddress) {
           setCurrentAccount(signerAddress);
@@ -136,11 +140,8 @@ export default function CampaignDetailPage() {
     
   };
 
-  if (!data) {
-  console.log('🧃 Data masih null');
-  return <p className="p-6">Loading campaign...</p>;
-}
-console.log('📦 Data siap:', data);
+if (!ready) return <p className="p-6">Loading campaign...</p>;
+
 
 
   return (
