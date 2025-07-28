@@ -136,6 +136,24 @@ export default function HomePage() {
           };
         })
       );
+      
+//dummy campaign test mobile
+
+if (addresses.length === 0) {
+  console.warn('⚠️ Tidak ada kampanye ditemukan, pakai dummy untuk test render');
+
+  setCampaigns([
+    {
+      address: '0x1234567890abcdef1234567890abcdef12345678',
+      title: 'Dummy Campaign',
+      description: 'Kampanye uji coba tampil di mobile',
+      goal: '10',
+      raised: '3',
+    },
+  ]);
+
+  return;
+}
 
       console.log('🧾 Detail kampanye:', details);
       setCampaigns(details);
