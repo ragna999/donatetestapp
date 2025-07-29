@@ -74,7 +74,7 @@ export default function ProfilePage() {
           <button
             onClick={async () => {
               await login(); // buka popup
-              setTimeout(() => window.location.reload(), 1500);
+              
             }}
             className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
