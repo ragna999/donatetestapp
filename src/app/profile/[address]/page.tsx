@@ -32,7 +32,7 @@ export default function OrganizerProfilePage() {
   useEffect(() => {
     if (!address || !ethers.isAddress(address)) return;
 
-    const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia');
+    const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
 
     const fetchCampaigns = async () => {
       try {
