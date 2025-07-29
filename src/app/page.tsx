@@ -73,34 +73,34 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-black via-[#0f0f0f] to-gray-900 text-white py-10 px-6">
+    <main className="min-h-screen bg-gradient-to-br from-white via-gray-100 to-gray-200 text-gray-900 py-10 px-6">
   <h1 className="text-4xl font-bold mb-10 tracking-wide text-center">🌐 Campaign Explorer</h1>
 
   {campaigns.length === 0 ? (
-    <p className="text-center text-gray-400">Tidak ada kampanye yang tersedia saat ini.</p>
+    <p className="text-center text-gray-500">Tidak ada kampanye yang tersedia saat ini.</p>
   ) : (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
       {campaigns.map((c) => (
         <div
           key={c.address}
-          className="bg-[#111111] border border-gray-800 rounded-2xl p-6 shadow-xl hover:shadow-blue-500/40 transition-all duration-300"
+          className="bg-white border border-gray-200 rounded-2xl p-6 shadow-md hover:shadow-blue-400/30 transition-all duration-300"
         >
-          <h2 className="text-2xl font-semibold mb-1 text-white">{c.title}</h2>
-          <p className="text-sm text-gray-400 mb-4 line-clamp-2">{c.description}</p>
+          <h2 className="text-2xl font-semibold mb-1 text-gray-900">{c.title}</h2>
+          <p className="text-sm text-gray-600 mb-4 line-clamp-2">{c.description}</p>
 
           <div className="mb-4">
-            <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+            <div className="h-2 bg-gray-300 rounded-full overflow-hidden">
               <div
                 className="bg-blue-500 h-full transition-all"
                 style={{ width: `${(Number(c.raised) / Number(c.goal)) * 100}%` }}
               />
             </div>
-            <p className="text-xs text-gray-300 mt-2">
+            <p className="text-xs text-gray-700 mt-2">
               💰 {c.raised} ETH dari {c.goal} ETH
             </p>
           </div>
 
-          <p className="text-xs text-gray-600 mb-4 truncate">📦 {c.address}</p>
+          <p className="text-xs text-gray-500 mb-4 truncate">📦 {c.address}</p>
 
           <Link href={`/campaign/${c.address}`}>
             <button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2 rounded-lg text-sm hover:scale-105 transition-all flex items-center justify-center gap-2">
@@ -112,6 +112,7 @@ export default function HomePage() {
     </div>
   )}
 </main>
+
 
   );
 }
