@@ -73,44 +73,45 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-black text-white py-10 px-6">
-      <h1 className="text-3xl font-bold mb-8">Campaigns</h1>
+    <main className="min-h-screen bg-gradient-to-br from-black via-[#0f0f0f] to-gray-900 text-white py-10 px-6">
+  <h1 className="text-4xl font-bold mb-10 tracking-wide text-center">🌐 Campaign Explorer</h1>
 
-      {campaigns.length === 0 ? (
-        <p className="text-gray-400">Belum ada kampanye yang aktif.</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {campaigns.map((c) => (
-            <div
-              key={c.address}
-              className="bg-white text-black p-5 rounded-2xl shadow-lg hover:scale-[1.02] transition"
-            >
-              <h2 className="text-xl font-bold mb-1">{c.title}</h2>
-              <p className="text-sm text-gray-600 mb-3 line-clamp-2">{c.description}</p>
+  {campaigns.length === 0 ? (
+    <p className="text-center text-gray-400">Tidak ada kampanye yang tersedia saat ini.</p>
+  ) : (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      {campaigns.map((c) => (
+        <div
+          key={c.address}
+          className="bg-[#111111] border border-gray-800 rounded-2xl p-6 shadow-xl hover:shadow-blue-500/40 transition-all duration-300"
+        >
+          <h2 className="text-2xl font-semibold mb-1 text-white">{c.title}</h2>
+          <p className="text-sm text-gray-400 mb-4 line-clamp-2">{c.description}</p>
 
-              <div className="mb-2">
-                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="bg-green-500 h-full"
-                    style={{ width: `${(Number(c.raised) / Number(c.goal)) * 100}%` }}
-                  ></div>
-                </div>
-                <p className="text-xs text-gray-700 mt-1">
-                  {c.raised} ETH raised of {c.goal} ETH
-                </p>
-              </div>
-
-              <p className="text-xs text-gray-400 truncate">{c.address}</p>
-
-              <Link href={`/campaign/${c.address}`} className="block mt-4">
-                <button className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 text-sm">
-                  Lihat Detail
-                </button>
-              </Link>
+          <div className="mb-4">
+            <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+              <div
+                className="bg-blue-500 h-full transition-all"
+                style={{ width: `${(Number(c.raised) / Number(c.goal)) * 100}%` }}
+              />
             </div>
-          ))}
+            <p className="text-xs text-gray-300 mt-2">
+              💰 {c.raised} ETH dari {c.goal} ETH
+            </p>
+          </div>
+
+          <p className="text-xs text-gray-600 mb-4 truncate">📦 {c.address}</p>
+
+          <Link href={`/campaign/${c.address}`}>
+            <button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2 rounded-lg text-sm hover:scale-105 transition-all flex items-center justify-center gap-2">
+              Lihat Detail <span>→</span>
+            </button>
+          </Link>
         </div>
-      )}
-    </main>
+      ))}
+    </div>
+  )}
+</main>
+
   );
 }
