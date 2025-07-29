@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import { ethers, Contract } from 'ethers';
 import Link from 'next/link';
@@ -32,19 +33,16 @@ const CAMPAIGN_ABI = [
 export default function HomePage() {
   const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
 
+
   useEffect(() => {
     const fetchCampaigns = async () => {
       try {
-        // ✅ Provider publik Sepolia (via Ankr)
         const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
-
         const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
-        const addresses: string[] = await factory.getCampaigns();
-
-        console.log('📦 Alamat campaign:', addresses);
+        const addresses = await factory.getCampaigns();
 
         const details = await Promise.all(
-          addresses.map(async (addr) => {
+          addresses.map(async (addr: string) => {
             const campaign = new Contract(addr, CAMPAIGN_ABI, provider);
             const [title, description, goal, totalDonated] = await Promise.all([
               campaign.title(),
@@ -52,7 +50,6 @@ export default function HomePage() {
               campaign.goal(),
               campaign.totalDonated(),
             ]);
-
             return {
               address: addr,
               title,
@@ -73,46 +70,50 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-white via-gray-100 to-gray-200 text-gray-900 py-10 px-6">
-  <h1 className="text-4xl font-bold mb-10 tracking-wide text-center">🌐 Campaign Explorer</h1>
+    <main className="min-h-screen bg-[#0f172a] text-white py-12 px-6">
+      <h1 className="text-4xl font-bold mb-12 text-center tracking-wide font-mono">
+        🧬 Web3 Campaign Explorer
+      </h1>
 
-  {campaigns.length === 0 ? (
-    <p className="text-center text-gray-500">Tidak ada kampanye yang tersedia saat ini.</p>
-  ) : (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-      {campaigns.map((c) => (
-        <div
-          key={c.address}
-          className="bg-white border border-gray-200 rounded-2xl p-6 shadow-md hover:shadow-blue-400/30 transition-all duration-300"
-        >
-          <h2 className="text-2xl font-semibold mb-1 text-gray-900">{c.title}</h2>
-          <p className="text-sm text-gray-600 mb-4 line-clamp-2">{c.description}</p>
+      {campaigns.length === 0 ? (
+        <p className="text-center text-gray-400">Tidak ada kampanye yang tersedia saat ini.</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {campaigns.map((c) => (
+            <div
+              key={c.address}
+              className="bg-gradient-to-br from-[#1e293b] to-[#0f172a] border border-blue-500/20 rounded-2xl p-6 shadow-xl hover:shadow-blue-500/30 transition-all duration-300 backdrop-blur-lg"
+            >
+              <h2 className="text-xl font-bold mb-2 text-white tracking-tight">
+                {c.title}
+              </h2>
+              <p className="text-sm text-gray-300 mb-4 line-clamp-2">{c.description}</p>
 
-          <div className="mb-4">
-            <div className="h-2 bg-gray-300 rounded-full overflow-hidden">
-              <div
-                className="bg-blue-500 h-full transition-all"
-                style={{ width: `${(Number(c.raised) / Number(c.goal)) * 100}%` }}
-              />
+              <div className="mb-4">
+                <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="bg-emerald-400 h-full"
+                    style={{ width: `${(Number(c.raised) / Number(c.goal)) * 100}%` }}
+                  />
+                </div>
+                <p className="text-xs text-emerald-200 mt-2">
+                  🔥 {c.raised} ETH dari {c.goal} ETH
+                </p>
+              </div>
+
+              <p className="text-xs text-gray-500 mb-4 truncate">
+                🧾 {c.address}
+              </p>
+
+              <Link href={`/campaign/${c.address}`}>
+                <button className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white py-2 rounded-xl text-sm hover:scale-[1.03] transition-all font-semibold">
+                  🚀 Lihat Detail
+                </button>
+              </Link>
             </div>
-            <p className="text-xs text-gray-700 mt-2">
-              💰 {c.raised} ETH dari {c.goal} ETH
-            </p>
-          </div>
-
-          <p className="text-xs text-gray-500 mb-4 truncate">📦 {c.address}</p>
-
-          <Link href={`/campaign/${c.address}`}>
-            <button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2 rounded-lg text-sm hover:scale-105 transition-all flex items-center justify-center gap-2">
-              Lihat Detail <span>→</span>
-            </button>
-          </Link>
+          ))}
         </div>
-      ))}
-    </div>
-  )}
-</main>
-
-
+      )}
+    </main>
   );
 }
