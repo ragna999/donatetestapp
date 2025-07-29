@@ -36,16 +36,16 @@ export default function ProfilePage() {
     );
   }
 
-  // === Email Logic ===
+  // === Email ===
   const emailObj =
-    typeof user?.email === 'string'&&user.email!=null
+    typeof user?.email === 'object' && user.email !== null
       ? (user.email as { address: string; isVerified?: boolean })
       : null;
 
   const emailAddress = emailObj?.address || '';
   const emailVerified = emailObj?.isVerified ?? false;
 
-  // === Twitter Logic ===
+  // === Twitter ===
   const twitterUsername = user?.twitter?.username || '';
   const twitterVerified = !!twitterUsername;
 
@@ -75,24 +75,39 @@ export default function ProfilePage() {
           </span>
         </p>
 
-        {/* Tombol verifikasi email (muncul kalau belum verif aja) */}
-{!emailVerified && (
-  <button
-    onClick={async () => {
-      try {
-        await linkEmail();
-        await refreshUser(); // update status setelah link
-        setRefreshKey((k) => k + 1);
-      } catch (err) {
-        console.error('Gagal verifikasi email:', err);
-      }
-    }}
-    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-  >
-    Verifikasi Email
-  </button>
-)}
+        {/* Tombol Verifikasi */}
+        {!emailVerified && !emailAddress && (
+          <button
+            onClick={async () => {
+              try {
+                await linkEmail();        // buka popup
+                await refreshUser();      // ambil user update
+                setRefreshKey(k => k + 1);
+              } catch (err) {
+                console.error('Gagal verifikasi email:', err);
+              }
+            }}
+            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Verifikasi Email
+          </button>
+        )}
 
+        {!emailVerified && emailAddress && (
+          <button
+            onClick={async () => {
+              try {
+                await refreshUser(); // Cek ulang status
+                setRefreshKey(k => k + 1);
+              } catch (err) {
+                console.error('Gagal refresh user:', err);
+              }
+            }}
+            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Cek Status Verifikasi
+          </button>
+        )}
       </section>
 
       {/* Twitter */}
@@ -110,7 +125,7 @@ export default function ProfilePage() {
             onClick={async () => {
               try {
                 await linkTwitter();
-                await new Promise((r) => setTimeout(r, 1500));
+                await new Promise(r => setTimeout(r, 1500)); // jaga-jaga delay sync
                 await refreshUser();
                 setRefreshKey(k => k + 1);
               } catch (err) {
@@ -124,7 +139,7 @@ export default function ProfilePage() {
         )}
       </section>
 
-      {/* Buat Kampanye */}
+      {/* CTA */}
       {canCreateCampaign && (
         <div className="pt-4">
           <button
