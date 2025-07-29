@@ -42,15 +42,10 @@ export default function CampaignDetailPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log('🚀 Fetching campaign:', id);
         if (!id || !ethers.isAddress(id)) return;
-
-        // 🔍 Gunakan read-only provider biar aman di DApp browser
-        const provider = new ethers.JsonRpcProvider(
-          'https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'
-        );
-
+        const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
         const contract = new Contract(id, CAMPAIGN_ABI, provider);
+
         const [title, description, goal, totalDonated, creator, donationsRaw] = await Promise.all([
           contract.title(),
           contract.description(),
@@ -78,7 +73,6 @@ export default function CampaignDetailPage() {
 
         setReady(true);
 
-        // Coba deteksi wallet (opsional, untuk tampilkan tombol withdraw)
         if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
           try {
             const browserProvider = new ethers.BrowserProvider(window.ethereum);
@@ -88,9 +82,7 @@ export default function CampaignDetailPage() {
             if (signerAddress.toLowerCase() === creator.toLowerCase()) {
               setIsOwner(true);
             }
-          } catch (e) {
-            console.warn('⚠️ Wallet belum connect, lanjut tanpa signer');
-          }
+          } catch {}
         }
       } catch (err) {
         console.error('❌ Error fetching campaign detail:', err);
@@ -103,7 +95,6 @@ export default function CampaignDetailPage() {
   const handleDonate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!window.ethereum || !donationAmount) return;
-
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
     const contract = new Contract(id, CAMPAIGN_ABI, signer);
@@ -114,13 +105,11 @@ export default function CampaignDetailPage() {
       window.location.reload();
     } catch (err) {
       alert('Donasi gagal');
-      console.error(err);
     }
   };
 
   const handleWithdraw = async () => {
     if (!window.ethereum) return;
-
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
     const contract = new Contract(id, CAMPAIGN_ABI, signer);
@@ -131,97 +120,92 @@ export default function CampaignDetailPage() {
       window.location.reload();
     } catch (err) {
       alert('Withdraw gagal');
-      console.error(err);
     }
   };
 
-  if (!ready) return <p className="p-6">Loading campaign...</p>;
+  if (!ready) return <p className="p-6 text-white">Loading campaign...</p>;
 
- return (
-  <div className="min-h-screen bg-white text-gray-900 p-6 max-w-3xl mx-auto" suppressHydrationWarning>
-    <img
-      src="https://placehold.co/600x300?text=Campaign"
-      alt="banner"
-      className="w-full h-64 object-cover rounded-lg shadow mb-6"
-    />
+  return (
+    <div className="min-h-screen bg-gray-900 text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
+      <img
+        src="https://placehold.co/600x300?text=Campaign"
+        alt="banner"
+        className="w-full h-64 object-cover rounded-lg shadow mb-6"
+      />
 
-    <h1 className="text-2xl font-bold mb-2">{data.title}</h1>
-    <p className="mb-4 text-gray-700">{data.description}</p>
+      <h1 className="text-2xl font-bold mb-2">{data.title}</h1>
+      <p className="mb-4 text-gray-300">{data.description}</p>
 
-    <div className="mb-6">
-      <p className="text-sm font-medium text-gray-600 mb-1">
-        {data.raised} ETH raised of {data.goal} ETH
+      <div className="mb-6">
+        <p className="text-sm font-medium text-gray-400 mb-1">
+          {data.raised} ETH dari {data.goal} ETH
+        </p>
+        <div className="w-full bg-gray-700 h-3 rounded-full overflow-hidden">
+          <div
+            className="bg-gradient-to-r from-green-400 to-lime-400 h-full transition-all"
+            style={{ width: `${(Number(data.raised) / Number(data.goal)) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      <p className="text-sm text-purple-300 mb-6">
+        👤 Diselenggarakan oleh:{' '}
+        <a href={`/profile/${data.creator}`} className="hover:underline break-all font-mono text-blue-400">
+          {data.creator}
+        </a>
       </p>
-      <div className="w-full bg-gray-200 h-3 rounded-full overflow-hidden">
-        <div
-          className="bg-gradient-to-r from-green-500 to-lime-400 h-full transition-all"
-          style={{ width: `${(Number(data.raised) / Number(data.goal)) * 100}%` }}
-        />
+
+      <p className="text-xs text-gray-500 mb-8 break-all font-mono">
+        Address: <span className="text-blue-500">{id}</span>
+      </p>
+
+      {currentAccount && (
+        <form onSubmit={handleDonate} className="mb-10">
+          <label className="block text-sm font-medium mb-2 text-gray-300">
+            Jumlah Donasi (ETH)
+          </label>
+          <input
+            type="number"
+            step="any"
+            value={donationAmount}
+            onChange={(e) => setDonationAmount(e.target.value)}
+            className="w-full px-4 py-3 rounded-md bg-gray-800 border border-gray-700 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Contoh: 0.01"
+          />
+          <button
+            type="submit"
+            className="mt-4 w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-md hover:from-blue-500 hover:to-indigo-500 transition-all duration-200"
+          >
+            🚀 Donasi Sekarang
+          </button>
+        </form>
+      )}
+
+      {isOwner && (
+        <button
+          onClick={handleWithdraw}
+          className="mb-10 w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-md hover:opacity-90 transition"
+        >
+          💸 Tarik Dana
+        </button>
+      )}
+
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Riwayat Donasi</h2>
+        <ul className="space-y-2">
+          {data.donations.map((d: any, i: number) => (
+            <li
+              key={i}
+              className="flex justify-between bg-gray-800 p-3 rounded-lg border border-gray-700 text-sm"
+            >
+              <span className="font-mono text-gray-300">
+                {d.donor.slice(0, 6)}...{d.donor.slice(-4)}
+              </span>
+              <span className="text-lime-400 font-semibold">{d.amount} ETH</span>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
-<p className="text-sm text-gray-500 mb-6">
-  👤 Diselenggarakan oleh:{' '}
-  <a
-    href={`/profile/${data.creator}`}
-    className="text-blue-600 hover:underline break-all font-mono"
-  >
-    {data.creator}
-  </a>
-</p>
-
-    <p className="text-xs text-gray-500 mb-8 break-all font-mono">
-      Address: <span className="text-blue-600">{id}</span>
-    </p>
-
-    {currentAccount && (
-      <form onSubmit={handleDonate} className="mb-10">
-        <label className="block text-sm font-medium mb-2 text-gray-800">
-          Jumlah Donasi (ETH)
-        </label>
-        <input
-          type="number"
-          step="any"
-          value={donationAmount}
-          onChange={(e) => setDonationAmount(e.target.value)}
-          className="w-full px-4 py-3 rounded-md bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Contoh: 0.01"
-        />
-        <button
-          type="submit"
-          className="mt-4 w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-md shadow hover:from-blue-500 hover:to-indigo-500 transition-all duration-200"
-        >
-          🚀 Donasi Sekarang
-        </button>
-      </form>
-    )}
-
-    {isOwner && (
-      <button
-        onClick={handleWithdraw}
-        className="mb-10 w-full bg-gradient-to-r from-red-500 to-rose-600 text-white py-3 rounded-md hover:opacity-90 transition"
-      >
-        💸 Tarik Dana
-      </button>
-    )}
-
-    <div>
-      <h2 className="text-lg font-semibold mb-4">Riwayat Donasi</h2>
-      <ul className="space-y-2">
-        {data.donations.map((d: any, i: number) => (
-          <li
-            key={i}
-            className="flex justify-between bg-gray-100 p-3 rounded-lg border border-gray-200 text-sm"
-          >
-            <span className="font-mono text-gray-700">
-              {d.donor.slice(0, 6)}...{d.donor.slice(-4)}
-            </span>
-            <span className="text-gray-800">{d.amount} ETH</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  </div>
-);
-
-
+  );
 }
