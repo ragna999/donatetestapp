@@ -36,7 +36,7 @@ export default function ProfilePage() {
     : null;
 
   const emailAddress = emailObj?.address || '';
-  const emailVerified = emailObj?.isVerified ?? false;
+  const emailVerified = emailObj?.isVerified;
 
   
   
