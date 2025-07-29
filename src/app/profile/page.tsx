@@ -12,7 +12,8 @@ export default function ProfilePage() {
     login,
     linkEmail,
     linkTwitter,
-  } = usePrivy();
+    refreshUser,
+  } = usePrivy() as any;
 
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0); // for re-render
@@ -74,14 +75,15 @@ const emailAddress = emailObj?.address || '';
         </p>
         {(!emailVerified || !emailAddress) && (
   <button
-    onClick={async () => {
-  await linkEmail();
-}}
+  onClick={async () => {
+    await login();       // buka popup verifikasi
+    await refreshUser(); // refetch data user biar status isVerified ke-update
+  }}
+  className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+>
+  Verifikasi Email
+</button>
 
-    className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-  >
-    Verifikasi Email
-  </button>
 )}
 
       </div>
