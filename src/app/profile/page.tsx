@@ -55,6 +55,8 @@ export default function ProfilePage() {
 
   const canCreateCampaign = emailVerified && twitterVerified;
 
+  console.log("USER:", user); //log
+
   return (
     <div
       key={refreshKey}
@@ -79,24 +81,39 @@ export default function ProfilePage() {
           </span>
         </p>
 
-        {(!emailVerified) && (
+        {(!emailVerified && emailAddress) && (
+  <button
+    onClick={async () => {
+      try {
+        await refreshUser();
+        window.location.reload();
+      } catch (err) {
+        console.error('Gagal refresh user:', err);
+      }
+    }}
+    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+  >
+    Refresh Status Email
+  </button>
+)}
 
-          <button
-  onClick={async () => {
-    try {
-      await linkEmail();       // buka popup
-      await new Promise((r) => setTimeout(r, 1500)); // kasih delay biar onboarding selesai
-      window.location.reload(); // force reload biar user state terbaru keambil
-    } catch (err) {
-      console.error('Gagal verifikasi email:', err);
-    }
-  }}
-  className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
->
-  Verifikasi Email
-</button>
+{(!emailVerified && !emailAddress) && (
+  <button
+    onClick={async () => {
+      try {
+        await linkEmail();
+        await new Promise((r) => setTimeout(r, 1500));
+        window.location.reload();
+      } catch (err) {
+        console.error('Gagal verifikasi email:', err);
+      }
+    }}
+    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+  >
+    Verifikasi Email
+  </button>
+)}
 
-        )}
       </section>
 
       {/* Twitter */}
