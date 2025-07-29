@@ -38,7 +38,7 @@ export default function ProfilePage() {
       : null;
 
   const emailAddress = emailObj?.address || '';
-  const emailVerified = emailObj?.isVerified ?? false;
+  const emailVerified = !!emailAddress; // ganti ini!
 
   // === Twitter ===
   const twitterUsername = user?.twitter?.username || '';
