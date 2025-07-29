@@ -137,7 +137,7 @@ export default function CampaignDetailPage() {
 
   if (!ready) return <p className="p-6">Loading campaign...</p>;
 
-  return (
+ return (
   <div className="min-h-screen bg-white text-gray-900 p-6 max-w-3xl mx-auto" suppressHydrationWarning>
     <img
       src="https://placehold.co/600x300?text=Campaign"
@@ -146,27 +146,27 @@ export default function CampaignDetailPage() {
     />
 
     <h1 className="text-2xl font-bold mb-2">{data.title}</h1>
-    <p className="mb-4 text-gray-300">{data.description}</p>
+    <p className="mb-4 text-gray-700">{data.description}</p>
 
     <div className="mb-6">
-      <p className="text-sm font-medium text-gray-400 mb-1">
+      <p className="text-sm font-medium text-gray-600 mb-1">
         {data.raised} ETH raised of {data.goal} ETH
       </p>
-      <div className="w-full bg-gray-800 h-3 rounded-full overflow-hidden">
+      <div className="w-full bg-gray-200 h-3 rounded-full overflow-hidden">
         <div
-          className="bg-gradient-to-r from-green-400 to-lime-500 h-full transition-all"
+          className="bg-gradient-to-r from-green-500 to-lime-400 h-full transition-all"
           style={{ width: `${(Number(data.raised) / Number(data.goal)) * 100}%` }}
         />
       </div>
     </div>
 
     <p className="text-xs text-gray-500 mb-8 break-all font-mono">
-      Address: <span className="text-blue-400">{id}</span>
+      Address: <span className="text-blue-600">{id}</span>
     </p>
 
     {currentAccount && (
       <form onSubmit={handleDonate} className="mb-10">
-        <label className="block text-sm font-medium mb-2 text-white">
+        <label className="block text-sm font-medium mb-2 text-gray-800">
           Jumlah Donasi (ETH)
         </label>
         <input
@@ -174,12 +174,12 @@ export default function CampaignDetailPage() {
           step="any"
           value={donationAmount}
           onChange={(e) => setDonationAmount(e.target.value)}
-          className="w-full px-4 py-3 rounded-md bg-black border border-gray-600 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-4 py-3 rounded-md bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Contoh: 0.01"
         />
         <button
           type="submit"
-          className="mt-4 w-full py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold rounded-md shadow hover:from-indigo-500 hover:to-blue-500 transition-all duration-200"
+          className="mt-4 w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-md shadow hover:from-blue-500 hover:to-indigo-500 transition-all duration-200"
         >
           🚀 Donasi Sekarang
         </button>
@@ -201,17 +201,18 @@ export default function CampaignDetailPage() {
         {data.donations.map((d: any, i: number) => (
           <li
             key={i}
-            className="flex justify-between bg-white/10 p-3 rounded-lg border border-white/10 text-sm backdrop-blur-md"
+            className="flex justify-between bg-gray-100 p-3 rounded-lg border border-gray-200 text-sm"
           >
-            <span className="font-mono text-gray-200">
+            <span className="font-mono text-gray-700">
               {d.donor.slice(0, 6)}...{d.donor.slice(-4)}
             </span>
-            <span className="text-white">{d.amount} ETH</span>
+            <span className="text-gray-800">{d.amount} ETH</span>
           </li>
         ))}
       </ul>
     </div>
   </div>
 );
+
 
 }
