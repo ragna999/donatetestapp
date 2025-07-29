@@ -10,13 +10,12 @@ export default function ProfilePage() {
     ready,
     authenticated,
     login,
-    linkEmail,
     linkTwitter,
     refreshUser,
   } = usePrivy() as any;
 
   const router = useRouter();
-  const [refreshKey, setRefreshKey] = useState(0); // for re-render
+  const [refreshKey, setRefreshKey] = useState(0); // trigger re-render
 
   if (!ready) return <p>Loading...</p>;
 
@@ -32,24 +31,22 @@ export default function ProfilePage() {
   }
 
   // === Email ===
-  const emailObj = typeof user?.email === 'object' && user.email !== null
-  ? (user.email as { address: string; isVerified?: boolean })
-  : null;
+  const emailObj =
+    typeof user?.email === 'object' && user.email !== null
+      ? (user.email as { address: string; isVerified?: boolean })
+      : null;
 
-const emailVerified = emailObj?.isVerified ?? true;
-const emailAddress = emailObj?.address || '';
+  const emailVerified = emailObj?.isVerified ?? false;
+  const emailAddress = emailObj?.address || '';
 
-  
-
-  
-  
   // === Twitter ===
   const twitterUsername = user?.twitter?.username || '';
   const twitterVerified = !!twitterUsername;
 
-  
   const twitterStatus = twitterVerified ? `✅ @${twitterUsername}` : '❌ Belum Terhubung';
-  const emailStatus = emailVerified ? `✅ @${emailAddress}` : '❌ Belum Terverifikasi';
+  const emailStatus = emailVerified
+    ? `✅ ${emailAddress}`
+    : '❌ Belum Terverifikasi';
 
   const canCreateCampaign = emailVerified && twitterVerified;
 
@@ -74,18 +71,17 @@ const emailAddress = emailObj?.address || '';
           </span>
         </p>
         {(!emailVerified || !emailAddress) && (
-  <button
-  onClick={async () => {
-    await login();       // buka popup verifikasi
-    await refreshUser(); // refetch data user biar status isVerified ke-update
-  }}
-  className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
->
-  Verifikasi Email
-</button>
-
-)}
-
+          <button
+            onClick={async () => {
+              await login(); // buka popup
+              await refreshUser(); // ambil data baru
+              setRefreshKey((prev) => prev + 1); // paksa render ulang
+            }}
+            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Verifikasi Email
+          </button>
+        )}
       </div>
 
       {/* Twitter */}
@@ -101,7 +97,7 @@ const emailAddress = emailObj?.address || '';
           <button
             onClick={async () => {
               await linkTwitter();
-              setTimeout(() => window.location.reload(), 1500);
+              setTimeout(() => window.location.reload(), 1500); // reload biar fresh
             }}
             className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
           >
