@@ -138,7 +138,7 @@ export default function CampaignDetailPage() {
   if (!ready) return <p className="p-6">Loading campaign...</p>;
 
   return (
-  <div className="min-h-screen bg-[#0B0B0B] text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
+  <div className="min-h-screen bg-white text-gray-900 p-6 max-w-3xl mx-auto" suppressHydrationWarning>
     <img
       src="https://placehold.co/600x300?text=Campaign"
       alt="banner"
