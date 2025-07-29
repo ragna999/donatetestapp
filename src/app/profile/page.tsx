@@ -40,12 +40,12 @@ const {
 
   // === Email Logic ===
   const emailObj =
-    typeof user?.email === 'object' && user.email !== null
+    typeof user?.email === 'string' && user.email !== null
       ? (user.email as { address: string; isVerified?: boolean })
       : null;
 
   const emailAddress = emailObj?.address || '';
-  const emailVerified = emailObj?.isVerified ?? true;
+  const emailVerified = emailObj?.isVerified ?? false;
   const emailStatus = emailVerified
     ? `✅ ${emailAddress}`
     : '❌ Belum Terverifikasi';
