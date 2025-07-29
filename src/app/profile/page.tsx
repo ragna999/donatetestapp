@@ -71,18 +71,23 @@ export default function ProfilePage() {
             {emailStatus}
           </span>
         </p>
-        {(!emailVerified || !emailAddress) && (
+        {(!emailVerified && !emailAddress) && (
   <button
     onClick={async () => {
-      await linkEmail();     // buka popup untuk verifikasi/nambah email
-      await refreshUser();   // ambil data user terbaru
-      setRefreshKey((prev) => prev + 1); // paksa re-render
+      try {
+        await linkEmail();       // buka popup
+        await refreshUser();     // refetch user info
+        setRefreshKey((prev) => prev + 1); // rerender
+      } catch (err) {
+        console.error('Gagal verifikasi email:', err);
+      }
     }}
     className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
   >
     Verifikasi Email
   </button>
 )}
+
 
       </div>
 
