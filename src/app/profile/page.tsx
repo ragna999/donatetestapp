@@ -64,53 +64,25 @@ export default function ProfilePage() {
         <p className="text-lg font-mono text-gray-800">{user?.wallet?.address}</p>
       </section>
 
-      {/* Email */}
-      <section>
-        <label className="text-gray-600 text-sm">Email:</label>
-        <p className="text-gray-800">{emailAddress || 'Belum menambahkan email'}</p>
-        <p className="text-sm">
-          Status:{' '}
-          <span className={`font-semibold ${emailVerified ? 'text-green-600' : 'text-red-600'}`}>
-            {emailVerified ? `✅ ${emailAddress}` : '❌ Belum Terverifikasi'}
-          </span>
-        </p>
+      
+      {/* Tombol verifikasi email (muncul kalau belum verif aja) */}
+{!emailVerified && (
+  <button
+    onClick={async () => {
+      try {
+        await linkEmail();
+        await refreshUser(); // update status setelah link
+        setRefreshKey((k) => k + 1);
+      } catch (err) {
+        console.error('Gagal verifikasi email:', err);
+      }
+    }}
+    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+  >
+    Verifikasi Email
+  </button>
+)}
 
-        {/* Tombol verifikasi (kalau belum nambah email) */}
-        {!emailAddress && (
-          <button
-            onClick={async () => {
-              try {
-                await linkEmail();
-                await new Promise((r) => setTimeout(r, 1500));
-                await refreshUser();
-                setRefreshKey(k => k + 1);
-              } catch (err) {
-                console.error('Gagal verifikasi email:', err);
-              }
-            }}
-            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Verifikasi Email
-          </button>
-        )}
-
-        {/* Tombol refresh status (kalau email udah ada tapi belum verif) */}
-        {emailAddress && !emailVerified && (
-          <button
-            onClick={async () => {
-              try {
-                await refreshUser();
-                setRefreshKey(k => k + 1);
-              } catch (err) {
-                console.error('Gagal refresh user:', err);
-              }
-            }}
-            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Refresh Status Email
-          </button>
-        )}
-      </section>
 
       {/* Twitter */}
       <section>
