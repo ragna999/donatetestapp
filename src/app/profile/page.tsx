@@ -36,7 +36,7 @@ export default function ProfilePage() {
   ? (user.email as { address: string; isVerified?: boolean })
   : null;
 
-const emailVerified = emailObj?.isVerified ?? false;
+const emailVerified = emailObj?.isVerified ?? true;
 const emailAddress = emailObj?.address || '';
 
   
