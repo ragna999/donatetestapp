@@ -159,6 +159,15 @@ export default function CampaignDetailPage() {
         />
       </div>
     </div>
+<p className="text-sm text-gray-500 mb-6">
+  👤 Diselenggarakan oleh:{' '}
+  <a
+    href={`/profile/${data.creator}`}
+    className="text-blue-600 hover:underline break-all font-mono"
+  >
+    {data.creator}
+  </a>
+</p>
 
     <p className="text-xs text-gray-500 mb-8 break-all font-mono">
       Address: <span className="text-blue-600">{id}</span>
