@@ -38,7 +38,7 @@ export default function ProfilePage() {
 
   // === Email Logic ===
   const emailObj =
-    typeof user?.email === 'object' && user.email !== null
+    typeof user?.email === 'string'&&user.email!=null
       ? (user.email as { address: string; isVerified?: boolean })
       : null;
 
