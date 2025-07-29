@@ -36,7 +36,8 @@ export default function ProfilePage() {
     : null;
 
   const emailAddress = emailObj?.address || '';
-  const emailVerified = emailObj?.isVerified ?? true;
+  const emailVerified = emailObj?.isVerified ?? false;
+
   
   
   // === Twitter ===
@@ -69,17 +70,18 @@ export default function ProfilePage() {
             {emailStatus}
           </span>
         </p>
-        {!emailVerified && (
-          <button
-            onClick={async () => {
-              await linkEmail();
-              setTimeout(() => window.location.reload(), 1500);
-            }}
-            className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Verifikasi Email
-          </button>
-        )}
+        {(!emailVerified || !emailAddress) && (
+  <button
+    onClick={async () => {
+      await linkEmail();
+      setTimeout(() => window.location.reload(), 1500);
+    }}
+    className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+  >
+    Verifikasi Email
+  </button>
+)}
+
       </div>
 
       {/* Twitter */}
