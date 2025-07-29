@@ -15,15 +15,15 @@ export default function ProfilePage() {
 
   const router = useRouter();
 
-  if (!ready) return <p className="p-6 text-center">Loading...</p>;
+  if (!ready) return <p className="p-6 text-center text-white">Loading...</p>;
 
   if (!authenticated) {
     return (
-      <div className="p-6 text-center">
+      <div className="p-6 text-center text-white">
         <p className="mb-4">Kamu belum login!</p>
         <button
           onClick={login}
-          className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800"
+          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded"
         >
           Connect Wallet
         </button>
@@ -31,107 +31,106 @@ export default function ProfilePage() {
     );
   }
 
-  // === Email ===
   const emailObj =
     typeof user?.email === 'object' && user.email !== null
       ? (user.email as { address: string; isVerified?: boolean })
       : null;
 
   const emailAddress = emailObj?.address || '';
-  const emailVerified = !!emailAddress; // ganti ini!
+  const emailVerified = !!emailAddress;
 
-  // === Twitter ===
   const twitterUsername = user?.twitter?.username || '';
   const twitterVerified = !!twitterUsername;
 
   const canCreateCampaign = emailVerified && twitterVerified;
 
   return (
-    <div className="max-w-3xl mx-auto p-8 bg-white rounded-lg shadow-lg mt-12 space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">Profil Pengguna</h1>
+    <div className="min-h-screen bg-gray-900 text-white py-12 px-4">
+      <div className="max-w-3xl mx-auto bg-gray-800 p-8 rounded-xl shadow-lg space-y-6">
+        <h1 className="text-3xl font-bold">👤 Profil Pengguna</h1>
 
-      {/* Wallet */}
-      <section>
-        <label className="text-gray-600 text-sm">Wallet Address:</label>
-        <p className="text-lg font-mono text-gray-800">{user?.wallet?.address}</p>
-      </section>
+        {/* Wallet */}
+        <section>
+          <label className="text-sm text-gray-400">Wallet Address:</label>
+          <p className="font-mono text-purple-300 break-all">{user?.wallet?.address}</p>
+        </section>
 
-      {/* Email */}
-      <section>
-        <label className="text-gray-600 text-sm">Email:</label>
-        <p className="text-gray-800">{emailAddress || 'Belum menambahkan email'}</p>
-        <p className="text-sm">
-          Status:{' '}
-          <span className={`font-semibold ${emailVerified ? 'text-green-600' : 'text-red-600'}`}>
-            {emailVerified ? `✅ ${emailAddress}` : '❌ Belum Terverifikasi'}
-          </span>
-        </p>
+        {/* Email */}
+        <section>
+          <label className="text-sm text-gray-400">Email:</label>
+          <p className="text-white">{emailAddress || 'Belum menambahkan email'}</p>
+          <p className="text-sm">
+            Status:{' '}
+            <span className={`font-semibold ${emailVerified ? 'text-green-400' : 'text-red-400'}`}>
+              {emailVerified ? `✅ ${emailAddress}` : '❌ Belum Terverifikasi'}
+            </span>
+          </p>
 
-        {/* Tombol Verifikasi */}
-        {!emailVerified && !emailAddress && (
-          <button
-            onClick={async () => {
-              try {
-                await linkEmail(); // buka popup
-              } catch (err) {
-                console.error('Gagal verifikasi email:', err);
-              }
-            }}
-            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Verifikasi Email
-          </button>
+          {!emailVerified && !emailAddress && (
+            <button
+              onClick={async () => {
+                try {
+                  await linkEmail();
+                } catch (err) {
+                  console.error('Gagal verifikasi email:', err);
+                }
+              }}
+              className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
+            >
+              Verifikasi Email
+            </button>
+          )}
+
+          {!emailVerified && emailAddress && (
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
+            >
+              Cek Status Verifikasi
+            </button>
+          )}
+        </section>
+
+        {/* Twitter */}
+        <section>
+          <label className="text-sm text-gray-400">Twitter:</label>
+          <p className="text-sm">
+            Status:{' '}
+            <span className={`font-semibold ${twitterVerified ? 'text-green-400' : 'text-red-400'}`}>
+              {twitterVerified ? `✅ @${twitterUsername}` : '❌ Belum Terhubung'}
+            </span>
+          </p>
+
+          {!twitterVerified && (
+            <button
+              onClick={async () => {
+                try {
+                  await linkTwitter();
+                  await new Promise((r) => setTimeout(r, 1500));
+                  window.location.reload();
+                } catch (err) {
+                  console.error('Gagal konek Twitter:', err);
+                }
+              }}
+              className="mt-2 bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded"
+            >
+              Connect Twitter
+            </button>
+          )}
+        </section>
+
+        {/* CTA */}
+        {canCreateCampaign && (
+          <div className="pt-4">
+            <button
+              onClick={() => router.push('/create')}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+            >
+              ➕ Buat Kampanye Donasi
+            </button>
+          </div>
         )}
-
-        {!emailVerified && emailAddress && (
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Cek Status Verifikasi
-          </button>
-        )}
-      </section>
-
-      {/* Twitter */}
-      <section>
-        <label className="text-gray-600 text-sm">Twitter:</label>
-        <p className="text-sm">
-          Status:{' '}
-          <span className={`font-semibold ${twitterVerified ? 'text-green-600' : 'text-red-600'}`}>
-            {twitterVerified ? `✅ @${twitterUsername}` : '❌ Belum Terhubung'}
-          </span>
-        </p>
-
-        {!twitterVerified && (
-          <button
-            onClick={async () => {
-              try {
-                await linkTwitter();
-                await new Promise((r) => setTimeout(r, 1500));
-                window.location.reload(); // trigger data refresh
-              } catch (err) {
-                console.error('Gagal konek Twitter:', err);
-              }
-            }}
-            className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
-          >
-            Connect Twitter
-          </button>
-        )}
-      </section>
-
-      {/* CTA */}
-      {canCreateCampaign && (
-        <div className="pt-4">
-          <button
-            onClick={() => router.push('/create')}
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-          >
-            ➕ Buat Kampanye Donasi
-          </button>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
