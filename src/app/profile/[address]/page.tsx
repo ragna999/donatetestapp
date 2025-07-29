@@ -74,47 +74,60 @@ export default function OrganizerProfilePage() {
   }, [address]);
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">
-        <span>👤</span> Profil Penyelenggara
-      </h1>
-      <p className="mb-6 text-sm text-gray-700">
-        Wallet: <a href={`https://sepolia.etherscan.io/address/${address}`} className="text-blue-600">{address}</a>
-      </p>
+  <div className="min-h-screen bg-white text-gray-900 p-6 max-w-5xl mx-auto">
+    <h1 className="text-3xl font-bold mb-4 flex items-center gap-2">
+      <span>👤</span> Profil Penyelenggara
+    </h1>
+    <p className="mb-8 text-sm text-gray-600">
+      Wallet:{" "}
+      <a
+        href={`https://sepolia.etherscan.io/address/${address}`}
+        className="text-blue-600 hover:underline break-all font-mono"
+      >
+        {address}
+      </a>
+    </p>
 
-      <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
-        <span>📂</span> Kampanye yang Dibuat
-      </h2>
+    <h2 className="text-2xl font-semibold mb-3 flex items-center gap-2">
+      <span>📂</span> Kampanye yang Dibuat
+    </h2>
 
-      {loading ? (
-        <p>Loading...</p>
-      ) : campaigns.length === 0 ? (
-        <p className="text-gray-500">Belum ada kampanye.</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
-          {campaigns.map((c) => (
-            <div key={c.address} className="bg-white shadow p-4 rounded-md border">
-              <h3 className="text-lg font-semibold">{c.title}</h3>
-              <p className="text-sm text-gray-500 mb-2 line-clamp-2">{c.description}</p>
-              <div className="h-2 bg-gray-200 rounded-full mb-1">
+    {loading ? (
+      <p className="text-gray-500">🔄 Sedang memuat kampanye...</p>
+    ) : campaigns.length === 0 ? (
+      <p className="text-gray-500">Belum ada kampanye.</p>
+    ) : (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+        {campaigns.map((c) => (
+          <div
+            key={c.address}
+            className="bg-white border border-gray-200 p-5 rounded-xl shadow-sm hover:shadow-md transition"
+          >
+            <h3 className="text-lg font-semibold text-gray-800 mb-1">{c.title}</h3>
+            <p className="text-sm text-gray-600 mb-3 line-clamp-2">{c.description}</p>
+
+            <div className="mb-2">
+              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div
-                  className="bg-green-500 h-full"
+                  className="bg-blue-500 h-full"
                   style={{ width: `${(Number(c.raised) / Number(c.goal)) * 100}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-600 mb-2">
-                {c.raised} ETH dari {c.goal} ETH
+              <p className="text-xs text-gray-600 mt-1">
+                💰 {c.raised} ETH dari {c.goal} ETH
               </p>
-              <Link
-                href={`/campaign/${c.address}`}
-                className="block text-center bg-blue-600 text-white py-2 rounded hover:bg-blue-700 text-sm"
-              >
-                Lihat Detail
-              </Link>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+
+            <Link href={`/campaign/${c.address}`}>
+              <button className="w-full mt-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition">
+                Lihat Detail →
+              </button>
+            </Link>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+);
+
 }
