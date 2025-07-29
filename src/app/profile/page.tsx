@@ -64,8 +64,18 @@ export default function ProfilePage() {
         <p className="text-lg font-mono text-gray-800">{user?.wallet?.address}</p>
       </section>
 
-      
-      {/* Tombol verifikasi email (muncul kalau belum verif aja) */}
+      {/* Email */}
+      <section>
+        <label className="text-gray-600 text-sm">Email:</label>
+        <p className="text-gray-800">{emailAddress || 'Belum menambahkan email'}</p>
+        <p className="text-sm">
+          Status:{' '}
+          <span className={`font-semibold ${emailVerified ? 'text-green-600' : 'text-red-600'}`}>
+            {emailVerified ? `✅ ${emailAddress}` : '❌ Belum Terverifikasi'}
+          </span>
+        </p>
+
+        {/* Tombol verifikasi email (muncul kalau belum verif aja) */}
 {!emailVerified && (
   <button
     onClick={async () => {
@@ -83,6 +93,7 @@ export default function ProfilePage() {
   </button>
 )}
 
+      </section>
 
       {/* Twitter */}
       <section>
