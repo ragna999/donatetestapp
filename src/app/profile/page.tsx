@@ -32,11 +32,13 @@ export default function ProfilePage() {
 
   // === Email ===
   const emailObj = typeof user?.email === 'object' && user.email !== null
-    ? (user.email as { address: string; isVerified?: boolean })
-    : null;
+  ? (user.email as { address: string; isVerified?: boolean })
+  : null;
 
-  const emailAddress = emailObj?.address || '';
-  const emailVerified = emailObj?.isVerified;
+const emailVerified = emailObj?.isVerified ?? false;
+const emailAddress = emailObj?.address || '';
+
+  
 
   
   
