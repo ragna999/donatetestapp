@@ -12,7 +12,7 @@ export default function ProfilePage() {
     login,
     linkTwitter,
     refreshUser,
-  } = usePrivy() as any;
+  } = usePrivy()as any;
 
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0); // trigger re-render
@@ -70,11 +70,12 @@ export default function ProfilePage() {
             {emailStatus}
           </span>
         </p>
-        {!emailVerified && (
+        {(!emailVerified || !emailAddress) && (
           <button
             onClick={async () => {
               await login(); // buka popup
-              
+              await refreshUser(); // ambil data baru
+              setRefreshKey((prev) => prev + 1); // paksa render ulang
             }}
             className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
