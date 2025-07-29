@@ -45,7 +45,7 @@ const {
       : null;
 
   const emailAddress = emailObj?.address || '';
-  const emailVerified = emailObj?.isVerified ?? false;
+  const emailVerified = emailObj?.isVerified ?? true;
   const emailStatus = emailVerified
     ? `✅ ${emailAddress}`
     : '❌ Belum Terverifikasi';
