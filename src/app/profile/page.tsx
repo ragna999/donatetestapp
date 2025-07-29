@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 
@@ -12,9 +11,7 @@ export default function ProfilePage() {
     login,
     linkTwitter,
     linkEmail,
-  } = usePrivy() as ReturnType<typeof usePrivy> & {
-    
-  };
+  } = usePrivy();
 
   const router = useRouter();
 
@@ -50,9 +47,7 @@ export default function ProfilePage() {
   const canCreateCampaign = emailVerified && twitterVerified;
 
   return (
-    <div
-      className="max-w-3xl mx-auto p-8 bg-white rounded-lg shadow-lg mt-12 space-y-6"
-    >
+    <div className="max-w-3xl mx-auto p-8 bg-white rounded-lg shadow-lg mt-12 space-y-6">
       <h1 className="text-3xl font-bold text-gray-900">Profil Pengguna</h1>
 
       {/* Wallet */}
@@ -62,6 +57,7 @@ export default function ProfilePage() {
       </section>
 
       {/* Email */}
+      <section>
         <label className="text-gray-600 text-sm">Email:</label>
         <p className="text-gray-800">{emailAddress || 'Belum menambahkan email'}</p>
         <p className="text-sm">
@@ -76,7 +72,8 @@ export default function ProfilePage() {
           <button
             onClick={async () => {
               try {
-                await linkEmail();        // buka popup
+                await linkEmail(); // buka popup
+                window.location.reload(); // force refresh biar ambil status terbaru
               } catch (err) {
                 console.error('Gagal verifikasi email:', err);
               }
@@ -87,33 +84,18 @@ export default function ProfilePage() {
           </button>
         )}
 
-       {!emailVerified && !emailAddress && (
-  <button
-    onClick={async () => {
-      try {
-        await linkEmail();
-        window.location.reload();
-      } catch (err) {
-        console.error('Gagal verifikasi email:', err);
-      }
-    }}
-    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-  >
-    Verifikasi Email
-  </button>
-)}
-
-{!emailVerified && emailAddress && (
-  <button
-    onClick={() => window.location.reload()}
-    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-  >
-    Cek Status Verifikasi
-  </button>
-)}
-
+        {!emailVerified && emailAddress && (
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Cek Status Verifikasi
+          </button>
+        )}
+      </section>
 
       {/* Twitter */}
+      <section>
         <label className="text-gray-600 text-sm">Twitter:</label>
         <p className="text-sm">
           Status:{' '}
@@ -123,22 +105,22 @@ export default function ProfilePage() {
         </p>
 
         {!twitterVerified && (
-  <button
-    onClick={async () => {
-      try {
-        await linkTwitter();
-        await new Promise((r) => setTimeout(r, 1500));
-        window.location.reload();
-      } catch (err) {
-        console.error('Gagal konek Twitter:', err);
-      }
-    }}
-    className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
-  >
-    Connect Twitter
-  </button>
-)}
-
+          <button
+            onClick={async () => {
+              try {
+                await linkTwitter();
+                await new Promise((r) => setTimeout(r, 1500));
+                window.location.reload(); // trigger data refresh
+              } catch (err) {
+                console.error('Gagal konek Twitter:', err);
+              }
+            }}
+            className="mt-2 bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600"
+          >
+            Connect Twitter
+          </button>
+        )}
+      </section>
 
       {/* CTA */}
       {canCreateCampaign && (
