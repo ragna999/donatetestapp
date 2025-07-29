@@ -1,23 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { usePrivy} from '@privy-io/react-auth';
+import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
-
-const {
-  user,
-  ready,
-  authenticated,
-  login,
-  linkTwitter,
-  linkEmail,
-  refreshUser, // ini error di typing
-} = usePrivy() as ReturnType<typeof usePrivy> & {
-  refreshUser: () => Promise<void>;
-};
-
+  const {
+    user,
+    ready,
+    authenticated,
+    login,
+    linkTwitter,
+    linkEmail,
+    refreshUser,
+  } = usePrivy() as ReturnType<typeof usePrivy> & {
+    refreshUser: () => Promise<void>;
+  };
 
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
@@ -40,26 +38,18 @@ const {
 
   // === Email Logic ===
   const emailObj =
-    typeof user?.email === 'string' && user.email !== null
+    typeof user?.email === 'object' && user.email !== null
       ? (user.email as { address: string; isVerified?: boolean })
       : null;
 
   const emailAddress = emailObj?.address || '';
   const emailVerified = emailObj?.isVerified ?? false;
-  const emailStatus = emailVerified
-    ? `✅ ${emailAddress}`
-    : '❌ Belum Terverifikasi';
 
   // === Twitter Logic ===
   const twitterUsername = user?.twitter?.username || '';
   const twitterVerified = !!twitterUsername;
-  const twitterStatus = twitterVerified
-    ? `✅ @${twitterUsername}`
-    : '❌ Belum Terhubung';
 
   const canCreateCampaign = emailVerified && twitterVerified;
-
-  console.log("USER:", user); //log
 
   return (
     <div
@@ -81,43 +71,45 @@ const {
         <p className="text-sm">
           Status:{' '}
           <span className={`font-semibold ${emailVerified ? 'text-green-600' : 'text-red-600'}`}>
-            {emailStatus}
+            {emailVerified ? `✅ ${emailAddress}` : '❌ Belum Terverifikasi'}
           </span>
         </p>
 
-        {(!emailVerified && emailAddress) && (
-  <button
-    onClick={async () => {
-      try {
-        await refreshUser();
-        window.location.reload();
-      } catch (err) {
-        console.error('Gagal refresh user:', err);
-      }
-    }}
-    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-  >
-    Refresh Status Email
-  </button>
-)}
+        {/* Tombol verifikasi (kalau belum nambah email) */}
+        {!emailAddress && (
+          <button
+            onClick={async () => {
+              try {
+                await linkEmail();
+                await new Promise((r) => setTimeout(r, 1500));
+                await refreshUser();
+                setRefreshKey(k => k + 1);
+              } catch (err) {
+                console.error('Gagal verifikasi email:', err);
+              }
+            }}
+            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Verifikasi Email
+          </button>
+        )}
 
-{(!emailVerified && !emailAddress) && (
-  <button
-    onClick={async () => {
-      try {
-        await linkEmail();
-        await new Promise((r) => setTimeout(r, 1500));
-        window.location.reload();
-      } catch (err) {
-        console.error('Gagal verifikasi email:', err);
-      }
-    }}
-    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-  >
-    Verifikasi Email
-  </button>
-)}
-
+        {/* Tombol refresh status (kalau email udah ada tapi belum verif) */}
+        {emailAddress && !emailVerified && (
+          <button
+            onClick={async () => {
+              try {
+                await refreshUser();
+                setRefreshKey(k => k + 1);
+              } catch (err) {
+                console.error('Gagal refresh user:', err);
+              }
+            }}
+            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Refresh Status Email
+          </button>
+        )}
       </section>
 
       {/* Twitter */}
@@ -126,7 +118,7 @@ const {
         <p className="text-sm">
           Status:{' '}
           <span className={`font-semibold ${twitterVerified ? 'text-green-600' : 'text-red-600'}`}>
-            {twitterStatus}
+            {twitterVerified ? `✅ @${twitterUsername}` : '❌ Belum Terhubung'}
           </span>
         </p>
 
@@ -135,7 +127,9 @@ const {
             onClick={async () => {
               try {
                 await linkTwitter();
-                setTimeout(() => window.location.reload(), 1500);
+                await new Promise((r) => setTimeout(r, 1500));
+                await refreshUser();
+                setRefreshKey(k => k + 1);
               } catch (err) {
                 console.error('Gagal konek Twitter:', err);
               }
@@ -147,7 +141,7 @@ const {
         )}
       </section>
 
-      {/* CTA */}
+      {/* Buat Kampanye */}
       {canCreateCampaign && (
         <div className="pt-4">
           <button
