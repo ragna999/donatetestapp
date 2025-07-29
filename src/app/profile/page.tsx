@@ -1,19 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy} from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
-  const {
-    user,
-    ready,
-    authenticated,
-    login,
-    linkEmail,
-    linkTwitter,
-    refreshUser,
-  } = usePrivy() as any;
+
+const {
+  user,
+  ready,
+  authenticated,
+  login,
+  linkTwitter,
+  linkEmail,
+  refreshUser, // ini error di typing
+} = usePrivy() as ReturnType<typeof usePrivy> & {
+  refreshUser: () => Promise<void>;
+};
+
 
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
