@@ -73,7 +73,6 @@ export default function ProfilePage() {
             onClick={async () => {
               try {
                 await linkEmail(); // buka popup
-                window.location.reload(); // force refresh biar ambil status terbaru
               } catch (err) {
                 console.error('Gagal verifikasi email:', err);
               }
