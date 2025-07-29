@@ -74,7 +74,6 @@ export default function ProfilePage() {
   <button
     onClick={async () => {
   await linkEmail();
-  alert('📨 Link verifikasi sudah dikirim ke email kamu.');
 }}
 
     className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
