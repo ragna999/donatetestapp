@@ -85,7 +85,8 @@ export default function CreateCampaignPage() {
 
       const goalInWei = ethers.parseEther(goal);
 
-      const tx = await factory.createCampaign(title, desc, goalInWei);
+      const tx = await factory.createCampaign(title, desc, imageUrl, goalInWei);
+
       await tx.wait();
 
       alert('✅ Kampanye berhasil dibuat!');
