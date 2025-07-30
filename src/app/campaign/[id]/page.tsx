@@ -7,6 +7,7 @@ import { ethers, Contract } from 'ethers';
 const CAMPAIGN_ABI = [
   { name: 'title', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
   { name: 'description', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
+  { name: 'image', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] }, // ✅ NEW
   { name: 'goal', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
   { name: 'totalDonated', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
   { name: 'creator', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] },
@@ -29,6 +30,7 @@ const CAMPAIGN_ABI = [
   { name: 'withdraw', type: 'function', stateMutability: 'nonpayable', inputs: [], outputs: [] },
 ];
 
+
 export default function CampaignDetailPage() {
   const params = useParams();
   const id = params?.id as string;
@@ -46,14 +48,16 @@ export default function CampaignDetailPage() {
         const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
         const contract = new Contract(id, CAMPAIGN_ABI, provider);
 
-        const [title, description, goal, totalDonated, creator, donationsRaw] = await Promise.all([
-          contract.title(),
-          contract.description(),
-          contract.goal(),
-          contract.totalDonated(),
-          contract.creator(),
-          contract.getDonations(),
-        ]);
+        const [title, description, image, goal, totalDonated, creator, donationsRaw] = await Promise.all([
+  contract.title(),
+  contract.description(),
+  contract.image(), // ✅ ambil image dari smart contract
+  contract.goal(),
+  contract.totalDonated(),
+  contract.creator(),
+  contract.getDonations(),
+]);
+
 
         const donations = Array.isArray(donationsRaw)
           ? donationsRaw.map((d: any) => ({
@@ -63,13 +67,15 @@ export default function CampaignDetailPage() {
           : [];
 
         setData({
-          title,
-          description,
-          goal: ethers.formatEther(goal),
-          raised: ethers.formatEther(totalDonated),
-          creator,
-          donations,
-        });
+  title,
+  description,
+  image, // ✅ simpan image
+  goal: ethers.formatEther(goal),
+  raised: ethers.formatEther(totalDonated),
+  creator,
+  donations,
+});
+
 
         setReady(true);
 
@@ -127,11 +133,20 @@ export default function CampaignDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
-      <img
-        src="https://placehold.co/600x300?text=Campaign"
-        alt="banner"
-        className="w-full h-64 object-cover rounded-lg shadow mb-6"
-      />
+      {data.image ? (
+  <img
+    src={data.image}
+    alt={data.title}
+    className="w-full h-64 object-cover rounded-lg shadow mb-6"
+  />
+) : (
+  <img
+    src="https://placehold.co/600x300?text=Campaign"
+    alt="default"
+    className="w-full h-64 object-cover rounded-lg shadow mb-6"
+  />
+)}
+
 
       <h1 className="text-2xl font-bold mb-2">{data.title}</h1>
       <p className="mb-4 text-gray-300">{data.description}</p>

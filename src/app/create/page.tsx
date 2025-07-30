@@ -5,12 +5,13 @@ import { ethers } from 'ethers';
 import { uploadToPinata } from '../utils/uploadToPinata';
 
 
-const FACTORY_ADDRESS = '0x44C69315b6531cC4E53f63FAB7769E33adcde87b';
+const FACTORY_ADDRESS = '0x7800BC9175383c47876Ce4cf4C6Fb947281d6187';
 const CAMPAIGN_ABI = [
   {
     inputs: [
       { internalType: 'string', name: '_title', type: 'string' },
       { internalType: 'string', name: '_description', type: 'string' },
+      { internalType: 'string', name: '_image', type: 'string' }, // ✅ Tambahan
       { internalType: 'uint256', name: '_goal', type: 'uint256' },
     ],
     name: 'createCampaign',
@@ -18,7 +19,24 @@ const CAMPAIGN_ABI = [
     stateMutability: 'nonpayable',
     type: 'function',
   },
+  {
+    inputs: [],
+    name: 'getCampaigns',
+    outputs: [{ internalType: 'address[]', name: '', type: 'address[]' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: false, internalType: 'address', name: 'campaignAddress', type: 'address' },
+      { indexed: false, internalType: 'address', name: 'creator', type: 'address' },
+    ],
+    name: 'CampaignCreated',
+    type: 'event',
+  },
 ];
+
 
 export default function CreateCampaignPage() {
   const [title, setTitle] = useState('');

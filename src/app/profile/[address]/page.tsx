@@ -19,10 +19,12 @@ const FACTORY_ABI = [
 const CAMPAIGN_ABI = [
   { name: 'title', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
   { name: 'description', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
+  { name: 'image', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] }, // ✅ tambahkan ini
   { name: 'goal', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
   { name: 'totalDonated', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
   { name: 'creator', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] },
 ];
+
 
 export default function OrganizerProfilePage() {
   const { address } = useParams();
@@ -42,23 +44,27 @@ export default function OrganizerProfilePage() {
         const filtered = await Promise.all(
           allAddresses.map(async (addr) => {
             const c = new Contract(addr, CAMPAIGN_ABI, provider);
-            const [creator, title, description, goal, raised] = await Promise.all([
-              c.creator(),
-              c.title(),
-              c.description(),
-              c.goal(),
-              c.totalDonated(),
-            ]);
+            const [creator, title, description, image, goal, raised] = await Promise.all([
+  c.creator(),
+  c.title(),
+  c.description(),
+  c.image(), // ✅ ambil gambar
+  c.goal(),
+  c.totalDonated(),
+]);
+
 
             if (creator.toLowerCase() !== address.toLowerCase()) return null;
 
             return {
-              address: addr,
-              title,
-              description,
-              goal: ethers.formatEther(goal),
-              raised: ethers.formatEther(raised),
-            };
+  address: addr,
+  title,
+  description,
+  image, // ✅ simpan
+  goal: ethers.formatEther(goal),
+  raised: ethers.formatEther(raised),
+};
+
           })
         );
 
@@ -99,11 +105,21 @@ export default function OrganizerProfilePage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
           {campaigns.map((c) => (
-            <div
-              key={c.address}
-              className="bg-gray-800 border border-gray-700 p-5 rounded-xl shadow hover:shadow-lg transition"
-            >
-              <h3 className="text-lg font-semibold text-white mb-1">{c.title}</h3>
+  <div
+    key={c.address}
+    className="bg-gray-800 border border-gray-700 p-5 rounded-xl shadow hover:shadow-lg transition"
+  >
+    {/* ✅ Gambar campaign */}
+    {c.image && (
+      <img
+        src={c.image}
+        alt={c.title}
+        className="w-full h-32 object-cover rounded-md mb-3 border"
+      />
+    )}
+
+    <h3 className="text-lg font-semibold text-white mb-1">{c.title}</h3>
+
               <p className="text-sm text-gray-300 mb-3 line-clamp-2">{c.description}</p>
 
               <div className="mb-2">

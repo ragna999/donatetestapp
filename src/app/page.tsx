@@ -8,11 +8,13 @@ type CampaignData = {
   address: string;
   title: string;
   description: string;
+  image: string; // ✅ NEW
   goal: string;
   raised: string;
 };
 
-const FACTORY_ADDRESS = '0x44C69315b6531cC4E53f63FAB7769E33adcde87b';
+
+const FACTORY_ADDRESS = '0x7800BC9175383c47876Ce4cf4C6Fb947281d6187';
 const FACTORY_ABI = [
   {
     inputs: [],
@@ -26,9 +28,11 @@ const FACTORY_ABI = [
 const CAMPAIGN_ABI = [
   { name: 'title', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'string' }] },
   { name: 'description', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'string' }] },
+  { name: 'image', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'string' }] }, // ✅ Tambahin ini!
   { name: 'goal', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'uint256' }] },
   { name: 'totalDonated', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'uint256' }] },
 ];
+
 
 export default function HomePage() {
   const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
@@ -44,19 +48,23 @@ export default function HomePage() {
         const details = await Promise.all(
           addresses.map(async (addr: string) => {
             const campaign = new Contract(addr, CAMPAIGN_ABI, provider);
-            const [title, description, goal, totalDonated] = await Promise.all([
-              campaign.title(),
-              campaign.description(),
-              campaign.goal(),
-              campaign.totalDonated(),
-            ]);
+            const [title, description, image, goal, totalDonated] = await Promise.all([
+            campaign.title(),
+            campaign.description(),
+            campaign.image(), // ✅ NEW
+            campaign.goal(),
+            campaign.totalDonated(),
+              ]);
+
             return {
-              address: addr,
-              title,
-              description,
-              goal: ethers.formatEther(goal),
-              raised: ethers.formatEther(totalDonated),
-            };
+  address: addr,
+  title,
+  description,
+  image, // ✅ NEW
+  goal: ethers.formatEther(goal),
+  raised: ethers.formatEther(totalDonated),
+};
+
           })
         );
 
@@ -80,13 +88,21 @@ export default function HomePage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {campaigns.map((c) => (
-            <div
-              key={c.address}
-              className="bg-gradient-to-br from-[#1e293b] to-[#0f172a] border border-blue-500/20 rounded-2xl p-6 shadow-xl hover:shadow-blue-500/30 transition-all duration-300 backdrop-blur-lg"
-            >
-              <h2 className="text-xl font-bold mb-2 text-white tracking-tight">
-                {c.title}
-              </h2>
+  <div
+    key={c.address}
+    className="bg-gradient-to-br from-[#1e293b] to-[#0f172a] border border-blue-500/20 rounded-2xl p-6 shadow-xl hover:shadow-blue-500/30 transition-all duration-300 backdrop-blur-lg"
+  >
+    {/* ✅ Tambahkan di sini */}
+    <img
+      src={c.image}
+      alt={c.title}
+      className="w-full h-40 object-cover rounded-lg mb-4 border"
+    />
+
+    <h2 className="text-xl font-bold mb-2 text-white tracking-tight">
+      {c.title}
+    </h2>
+
               <p className="text-sm text-gray-300 mb-4 line-clamp-2">{c.description}</p>
 
               <div className="mb-4">
