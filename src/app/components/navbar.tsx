@@ -14,15 +14,16 @@ export default function Navbar() {
     : '';
 
   return (
-    <nav className="bg-gradient-to-br from-white via-gray-100 to-gray-200 px-6 py-4 flex justify-between items-center border-b border-gray-300 shadow-sm">
+    <nav className="bg-gradient-to-br from-white via-gray-100 to-gray-200 w-full px-4 py-3 flex flex-wrap items-center justify-between border-b border-gray-300 shadow-sm">
+      {/* Logo */}
       <Link href="/" className="text-2xl font-extrabold text-blue-700 tracking-tight">
         🌐 DonasiChain
       </Link>
 
       {authenticated ? (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 justify-end max-w-full overflow-hidden">
           {/* Wallet badge */}
-          <span className="bg-gray-200 text-xs text-gray-800 font-mono px-3 py-1 rounded-full border border-gray-400 shadow-inner">
+          <span className="truncate max-w-[110px] bg-gray-200 text-xs text-gray-800 font-mono px-3 py-1 rounded-full border border-gray-400 shadow-inner">
             {shortAddress}
           </span>
 
@@ -45,7 +46,7 @@ export default function Navbar() {
       ) : (
         <button
           onClick={login}
-          className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2 rounded-full text-sm hover:brightness-105 transition-all"
+          className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2 rounded-full text-sm hover:brightness-105 transition-all mt-2 sm:mt-0"
         >
           Connect Wallet
         </button>
