@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation';
 import { Contract, ethers } from 'ethers';
 import Link from 'next/link';
 
-const FACTORY_ADDRESS = '0x44C69315b6531cC4E53f63FAB7769E33adcde87b';
+const FACTORY_ADDRESS = '0x7800BC9175383c47876Ce4cf4C6Fb947281d6187';
+
 const FACTORY_ABI = [
   {
     inputs: [],
