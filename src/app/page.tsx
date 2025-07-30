@@ -37,6 +37,10 @@ export default function HomePage() {
   const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
+  const toggleDescription = (addr: string) => {
+    setExpanded((prev) => ({ ...prev, [addr]: !prev[addr] }));
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -77,10 +81,6 @@ export default function HomePage() {
     fetchData();
   }, []);
 
-  const toggleDescription = (addr: string) => {
-    setExpanded((prev) => ({ ...prev, [addr]: !prev[addr] }));
-  };
-
   return (
     <main className="min-h-screen bg-[#0f172a] text-white py-12 px-6">
       <h1 className="text-4xl font-bold mb-12 text-center tracking-wide font-mono">
@@ -91,67 +91,55 @@ export default function HomePage() {
         <p className="text-center text-gray-400">Tidak ada kampanye yang tersedia saat ini.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 auto-rows-fr">
-          {campaigns.map((c) => {
-            const showFull = expanded[c.address];
-            const isLong = c.description.length > 120;
-            const preview = c.description.slice(0, 100);
+          {campaigns.map((c) => (
+            <div
+              key={c.address}
+              className="flex flex-col justify-between h-full bg-gradient-to-br from-[#1e293b] to-[#0f172a] border border-blue-500/20 rounded-2xl p-6 shadow-xl hover:shadow-blue-500/30 transition-all duration-300 backdrop-blur-lg"
+            >
+              <img
+                src={c.image || 'https://placehold.co/400x200?text=No+Image'}
+                alt={c.title}
+                className="w-full h-40 object-cover rounded-lg mb-4 border"
+              />
 
-            return (
-              <div
-                key={c.address}
-                className="flex flex-col justify-between h-full bg-gradient-to-br from-[#1e293b] to-[#0f172a] border border-blue-500/20 rounded-2xl p-6 shadow-xl hover:shadow-blue-500/30 transition-all duration-300 backdrop-blur-lg"
-              >
-                <img
-                  src={c.image || 'https://placehold.co/400x200?text=No+Image'}
-                  alt={c.title}
-                  className="w-full h-40 object-cover rounded-lg mb-4 border"
-                />
+              <h2 className="text-xl font-bold mb-2 text-white tracking-tight">{c.title}</h2>
 
-                <h2 className="text-xl font-bold mb-2 text-white tracking-tight">{c.title}</h2>
-
-                <p className="text-sm text-gray-300 mb-2">
-                  {showFull ? c.description : isLong ? `${preview}...` : c.description}
+              <div className="mb-2">
+                <p className={`text-sm text-gray-300 ${expanded[c.address] ? '' : 'line-clamp-3'}`}>
+                  {c.description}
                 </p>
 
-                <div className="relative mb-2">
-  <p className={`text-sm text-gray-300 ${showFull ? '' : 'line-clamp-3'} transition-all duration-300`}>
-    {c.description}
-  </p>
-
-  {c.description.length > 120 && (
-  <button
-    onClick={() => toggleDescription(c.address)}
-    className="text-xs text-blue-400 hover:underline mb-3 text-left"
-  >
-    {expanded[c.address] ? 'See less' : 'See more'}
-  </button>
-)}
-
-</div>
-
-
-                <div className="mb-3 mt-1">
-                  <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
-                    <div
-                      className="bg-emerald-400 h-full"
-                      style={{ width: `${(Number(c.raised) / Number(c.goal)) * 100}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-emerald-200 mt-2">
-                    🔥 {c.raised} ETH dari {c.goal} ETH
-                  </p>
-                </div>
-
-                <p className="text-xs text-gray-500 mb-4 truncate font-mono">🧾 {c.address}</p>
-
-                <Link href={`/campaign/${c.address}`}>
-                  <button className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white py-2 rounded-xl text-sm hover:scale-[1.03] transition-all font-semibold">
-                    🚀 Lihat Detail
+                {c.description.length > 120 && (
+                  <button
+                    onClick={() => toggleDescription(c.address)}
+                    className="text-xs text-blue-400 hover:underline mt-1"
+                  >
+                    {expanded[c.address] ? 'See less' : 'See more'}
                   </button>
-                </Link>
+                )}
               </div>
-            );
-          })}
+
+              <div className="mb-3 mt-1">
+                <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="bg-emerald-400 h-full"
+                    style={{ width: `${(Number(c.raised) / Number(c.goal)) * 100}%` }}
+                  />
+                </div>
+                <p className="text-xs text-emerald-200 mt-2">
+                  🔥 {c.raised} ETH dari {c.goal} ETH
+                </p>
+              </div>
+
+              <p className="text-xs text-gray-500 mb-4 truncate font-mono">🧾 {c.address}</p>
+
+              <Link href={`/campaign/${c.address}`}>
+                <button className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white py-2 rounded-xl text-sm hover:scale-[1.03] transition-all font-semibold">
+                  🚀 Lihat Detail
+                </button>
+              </Link>
+            </div>
+          ))}
         </div>
       )}
     </main>
