@@ -1,4 +1,3 @@
-// Tambahan: Import React jika diperlukan
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -37,10 +36,6 @@ const CAMPAIGN_ABI = [
 export default function HomePage() {
   const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-
-  const toggleDescription = (address: string) => {
-    setExpanded((prev) => ({ ...prev, [address]: !prev[address] }));
-  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -82,6 +77,10 @@ export default function HomePage() {
     fetchData();
   }, []);
 
+  const toggleDescription = (addr: string) => {
+    setExpanded((prev) => ({ ...prev, [addr]: !prev[addr] }));
+  };
+
   return (
     <main className="min-h-screen bg-[#0f172a] text-white py-12 px-6">
       <h1 className="text-4xl font-bold mb-12 text-center tracking-wide font-mono">
@@ -93,7 +92,9 @@ export default function HomePage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 auto-rows-fr">
           {campaigns.map((c) => {
-            const showFull = expanded[c.address];
+            const isExpanded = expanded[c.address];
+            const isLong = c.description.length > 120;
+            const preview = c.description.slice(0, 100);
 
             return (
               <div
@@ -106,35 +107,26 @@ export default function HomePage() {
                   className="w-full h-40 object-cover rounded-lg mb-4 border"
                 />
 
-                <h2 className="text-xl font-bold mb-2 text-white tracking-tight">
-                  {c.title}
-                </h2>
+                <h2 className="text-xl font-bold mb-2 text-white tracking-tight">{c.title}</h2>
 
                 <p className="text-sm text-gray-300 mb-2">
-  {showFull
-    ? c.description
-    : c.description.length > 120
-      ? `${c.description.slice(0, 100)}...`
-      : c.description}
-</p>
+                  {isExpanded ? c.description : isLong ? `${preview}...` : c.description}
+                </p>
 
-{c.description.length > 120 && (
-  <button
-    onClick={() => toggleDescription(c.address)}
-
-    className="text-xs text-blue-400 hover:underline mb-3 text-left"
-  >
-    {showFull ? 'See less' : 'See more'}
-  </button>
-)}
+                {isLong && (
+                  <button
+                    onClick={() => toggleDescription(c.address)}
+                    className="text-xs text-blue-400 hover:underline mb-3 text-left"
+                  >
+                    {isExpanded ? 'See less' : 'See more'}
+                  </button>
+                )}
 
                 <div className="mb-3 mt-1">
                   <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
                     <div
                       className="bg-emerald-400 h-full"
-                      style={{
-                        width: `${(Number(c.raised) / Number(c.goal)) * 100}%`,
-                      }}
+                      style={{ width: `${(Number(c.raised) / Number(c.goal)) * 100}%` }}
                     />
                   </div>
                   <p className="text-xs text-emerald-200 mt-2">
@@ -142,9 +134,7 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                <p className="text-xs text-gray-500 mb-4 truncate font-mono">
-                  🧾 {c.address}
-                </p>
+                <p className="text-xs text-gray-500 mb-4 truncate font-mono">🧾 {c.address}</p>
 
                 <Link href={`/campaign/${c.address}`}>
                   <button className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white py-2 rounded-xl text-sm hover:scale-[1.03] transition-all font-semibold">
