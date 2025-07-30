@@ -111,31 +111,22 @@ export default function HomePage() {
                 </h2>
 
                 <p className="text-sm text-gray-300 mb-2">
-                  {showFull ? c.description : (
-                    <>
-                      {c.description.length > 120 ? (
-                        <>
-                          {c.description.slice(0, 100)}...
-                          <button
-                            onClick={() => toggleDescription(c.address)}
-                            className="text-blue-400 text-xs ml-1 underline"
-                          >
-                            See more
-                          </button>
-                        </>
-                      ) : c.description}
-                    </>
-                  )}
-                </p>
+  {showFull
+    ? c.description
+    : c.description.length > 120
+      ? `${c.description.slice(0, 100)}...`
+      : c.description}
+</p>
 
-                {showFull && c.description.length > 120 && (
-                  <button
-                    onClick={() => toggleDescription(c.address)}
-                    className="text-xs text-blue-400 hover:underline mb-3 text-left"
-                  >
-                    See less
-                  </button>
-                )}
+{c.description.length > 120 && (
+  <button
+    onClick={() => toggleDescription(c.address)}
+
+    className="text-xs text-blue-400 hover:underline mb-3 text-left"
+  >
+    {showFull ? 'See less' : 'See more'}
+  </button>
+)}
 
                 <div className="mb-3 mt-1">
                   <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
