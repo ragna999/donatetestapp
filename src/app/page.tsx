@@ -46,7 +46,7 @@ export default function HomePage() {
   useEffect(() => {
     const fetchCampaigns = async () => {
       try {
-        const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/YOUR_KEY');
+        const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26Y');
         const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
         const addresses = await factory.getCampaigns();
 
