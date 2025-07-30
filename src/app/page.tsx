@@ -92,6 +92,7 @@ export default function HomePage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 auto-rows-fr">
           {campaigns.map((c) => {
+            const showFull = expanded[c.address];
             const isExpanded = expanded[c.address];
             const isLong = c.description.length > 120;
             const preview = c.description.slice(0, 100);
@@ -113,14 +114,22 @@ export default function HomePage() {
                   {isExpanded ? c.description : isLong ? `${preview}...` : c.description}
                 </p>
 
-                {isLong && (
-                  <button
-                    onClick={() => toggleDescription(c.address)}
-                    className="text-xs text-blue-400 hover:underline mb-3 text-left"
-                  >
-                    {isExpanded ? 'See less' : 'See more'}
-                  </button>
-                )}
+                <div className="relative mb-2">
+  <p className={`text-sm text-gray-300 ${showFull ? '' : 'line-clamp-3'} transition-all duration-300`}>
+    {c.description}
+  </p>
+
+  {c.description.length > 120 && (
+  <button
+    onClick={() => toggleDescription(c.address)}
+    className="text-xs text-blue-400 hover:underline mb-3 text-left"
+  >
+    {expanded[c.address] ? 'See less' : 'See more'}
+  </button>
+)}
+
+</div>
+
 
                 <div className="mb-3 mt-1">
                   <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
