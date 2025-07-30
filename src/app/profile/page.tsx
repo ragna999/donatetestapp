@@ -1,19 +1,81 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
+import { ethers, Contract } from 'ethers';
+import Link from 'next/link';
+
+const FACTORY_ADDRESS = '0x7800BC9175383c47876Ce4cf4C6Fb947281d6187';
+const FACTORY_ABI = [
+  {
+    inputs: [],
+    name: 'getCampaigns',
+    outputs: [{ internalType: 'address[]', name: '', type: 'address[]' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+];
+
+const CAMPAIGN_ABI = [
+  { name: 'title', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
+  { name: 'description', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
+  { name: 'image', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
+  { name: 'goal', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+  { name: 'totalDonated', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+  { name: 'creator', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] },
+];
 
 export default function ProfilePage() {
-  const {
-    user,
-    ready,
-    authenticated,
-    login,
-    linkTwitter,
-    linkEmail,
-  } = usePrivy();
-
+  const { user, ready, authenticated, login, linkTwitter, linkEmail } = usePrivy();
   const router = useRouter();
+
+  const [userCampaigns, setUserCampaigns] = useState<any[]>([]);
+  const [loadingCampaigns, setLoadingCampaigns] = useState(true);
+
+  useEffect(() => {
+    const fetchUserCampaigns = async () => {
+      if (!user?.wallet?.address) return;
+
+      const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
+      const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
+      const allAddresses: string[] = await factory.getCampaigns();
+
+      const filtered = await Promise.all(
+        allAddresses.map(async (addr) => {
+          try {
+            const c = new Contract(addr, CAMPAIGN_ABI, provider);
+            const [creator, title, description, image, goal, raised] = await Promise.all([
+              c.creator(),
+              c.title(),
+              c.description(),
+              c.image(),
+              c.goal(),
+              c.totalDonated(),
+            ]);
+           if (!user?.wallet?.address) return null;
+            if (creator.toLowerCase() !== user.wallet.address.toLowerCase()) return null;
+
+            return {
+              address: addr,
+              title,
+              description,
+              image,
+              goal: ethers.formatEther(goal),
+              raised: ethers.formatEther(raised),
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      setUserCampaigns(filtered.filter(Boolean));
+      setLoadingCampaigns(false);
+    };
+
+    if (authenticated) fetchUserCampaigns();
+  }, [authenticated, user]);
 
   if (!ready) return <p className="p-6 text-center text-white">Loading...</p>;
 
@@ -21,27 +83,21 @@ export default function ProfilePage() {
     return (
       <div className="p-6 text-center text-white">
         <p className="mb-4">Kamu belum login!</p>
-        <button
-          onClick={login}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded"
-        >
+        <button onClick={login} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded">
           Connect Wallet
         </button>
       </div>
     );
   }
 
-  const emailObj =
-    typeof user?.email === 'object' && user.email !== null
-      ? (user.email as { address: string; isVerified?: boolean })
-      : null;
+  const emailObj = typeof user?.email === 'object' && user.email !== null
+    ? (user.email as { address: string; isVerified?: boolean })
+    : null;
 
   const emailAddress = emailObj?.address || '';
   const emailVerified = !!emailAddress;
-
   const twitterUsername = user?.twitter?.username || '';
   const twitterVerified = !!twitterUsername;
-
   const canCreateCampaign = emailVerified && twitterVerified;
 
   return (
@@ -67,25 +123,13 @@ export default function ProfilePage() {
           </p>
 
           {!emailVerified && !emailAddress && (
-            <button
-              onClick={async () => {
-                try {
-                  await linkEmail();
-                } catch (err) {
-                  console.error('Gagal verifikasi email:', err);
-                }
-              }}
-              className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
-            >
+            <button onClick={linkEmail} className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">
               Verifikasi Email
             </button>
           )}
 
           {!emailVerified && emailAddress && (
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
-            >
+            <button onClick={() => window.location.reload()} className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">
               Cek Status Verifikasi
             </button>
           )}
@@ -119,7 +163,6 @@ export default function ProfilePage() {
           )}
         </section>
 
-        {/* CTA */}
         {canCreateCampaign && (
           <div className="pt-4">
             <button
@@ -128,6 +171,33 @@ export default function ProfilePage() {
             >
               ➕ Buat Kampanye Donasi
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* Riwayat Kampanye */}
+      <div className="max-w-5xl mx-auto mt-12">
+        <h2 className="text-2xl font-bold mb-4">🗂 Riwayat Kampanye Anda</h2>
+
+        {loadingCampaigns ? (
+          <p className="text-gray-400">🔄 Memuat kampanye...</p>
+        ) : userCampaigns.length === 0 ? (
+          <p className="text-gray-500">Belum ada kampanye yang dibuat.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {userCampaigns.map((c) => (
+              <div key={c.address} className="bg-gray-800 border border-gray-700 p-4 rounded-lg">
+                <img src={c.image} alt={c.title} className="w-full h-32 object-cover rounded mb-3" />
+                <h3 className="font-bold text-lg">{c.title}</h3>
+                <p className="text-sm text-gray-400 line-clamp-2">{c.description}</p>
+                <p className="text-xs text-emerald-300 mt-2">💰 {c.raised} ETH dari {c.goal} ETH</p>
+                <Link href={`/campaign/${c.address}`}>
+                  <button className="mt-3 text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded w-full">
+                    Detail →
+                  </button>
+                </Link>
+              </div>
+            ))}
           </div>
         )}
       </div>
