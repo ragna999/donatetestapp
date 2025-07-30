@@ -93,7 +93,6 @@ export default function HomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 auto-rows-fr">
           {campaigns.map((c) => {
             const showFull = expanded[c.address];
-            const isExpanded = expanded[c.address];
             const isLong = c.description.length > 120;
             const preview = c.description.slice(0, 100);
 
@@ -111,7 +110,7 @@ export default function HomePage() {
                 <h2 className="text-xl font-bold mb-2 text-white tracking-tight">{c.title}</h2>
 
                 <p className="text-sm text-gray-300 mb-2">
-                  {isExpanded ? c.description : isLong ? `${preview}...` : c.description}
+                  {showFull ? c.description : isLong ? `${preview}...` : c.description}
                 </p>
 
                 <div className="relative mb-2">
