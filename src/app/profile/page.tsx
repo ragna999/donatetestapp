@@ -32,6 +32,14 @@ export default function ProfilePage() {
 
   const [userCampaigns, setUserCampaigns] = useState<any[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
+  const [expanded, setExpanded] = useState<{ [addr: string]: boolean }>({});
+
+  const toggleDesc = (addr: string) => {
+    setExpanded((prev) => ({
+      ...prev,
+      [addr]: !prev[addr],
+    }));
+  };
 
   useEffect(() => {
     const fetchUserCampaigns = async () => {
@@ -53,7 +61,7 @@ export default function ProfilePage() {
               c.goal(),
               c.totalDonated(),
             ]);
-           if (!user?.wallet?.address) return null;
+            if (!user?.wallet?.address) return null;
             if (creator.toLowerCase() !== user.wallet.address.toLowerCase()) return null;
 
             return {
@@ -176,49 +184,59 @@ export default function ProfilePage() {
       </div>
 
       {/* Riwayat Kampanye */}
-<div className="max-w-5xl mx-auto mt-12">
-  <h2 className="text-2xl font-bold mb-4">🗂 Riwayat Kampanye Anda</h2>
+      <div className="max-w-5xl mx-auto mt-12">
+        <h2 className="text-2xl font-bold mb-4">🗂 Riwayat Kampanye Anda</h2>
 
-  {loadingCampaigns ? (
-    <p className="text-gray-400">🔄 Memuat kampanye...</p>
-  ) : userCampaigns.length === 0 ? (
-    <p className="text-gray-500">Belum ada kampanye yang dibuat.</p>
-  ) : (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      {userCampaigns.map((c) => (
-        <div
-          key={c.address}
-          className="flex flex-col justify-between h-full bg-gray-800 border border-gray-700 p-4 rounded-lg"
-        >
-          <img
-            src={c.image || 'https://placehold.co/400x200?text=No+Image'}
-            alt={c.title}
-            className="w-full h-32 object-cover rounded mb-3"
-          />
+        {loadingCampaigns ? (
+          <p className="text-gray-400">🔄 Memuat kampanye...</p>
+        ) : userCampaigns.length === 0 ? (
+          <p className="text-gray-500">Belum ada kampanye yang dibuat.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {userCampaigns.map((c) => (
+              <div
+                key={c.address}
+                className="flex flex-col justify-between h-full bg-gray-800 border border-gray-700 p-4 rounded-lg"
+              >
+                <img
+                  src={c.image || 'https://placehold.co/400x200?text=No+Image'}
+                  alt={c.title}
+                  className="w-full h-32 object-cover rounded mb-3"
+                />
 
-          <div className="flex-1 flex flex-col">
-            <h3 className="font-bold text-lg">{c.title}</h3>
+                <div className="flex-1 flex flex-col">
+                  <h3 className="font-bold text-lg">{c.title}</h3>
 
-            <p className="text-sm text-gray-400 line-clamp-2 mb-2">
-              {c.description}
-            </p>
+                  {expanded[c.address] ? (
+                    <p className="text-sm text-gray-400 mb-2">{c.description}</p>
+                  ) : (
+                    <p className="text-sm text-gray-400 mb-2 line-clamp-2">{c.description}</p>
+                  )}
 
-            <p className="text-xs text-emerald-300 mt-auto">
-              💰 {c.raised} ETH dari {c.goal} ETH
-            </p>
+                  {c.description.length > 100 && (
+                    <button
+                      onClick={() => toggleDesc(c.address)}
+                      className="text-xs text-blue-400 hover:underline mb-2 text-left"
+                    >
+                      {expanded[c.address] ? 'See less' : 'See more'}
+                    </button>
+                  )}
+
+                  <p className="text-xs text-emerald-300 mt-auto">
+                    💰 {c.raised} ETH dari {c.goal} ETH
+                  </p>
+                </div>
+
+                <Link href={`/campaign/${c.address}`} className="mt-3">
+                  <button className="w-full text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded">
+                    Detail →
+                  </button>
+                </Link>
+              </div>
+            ))}
           </div>
-
-          <Link href={`/campaign/${c.address}`} className="mt-3">
-            <button className="w-full text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded">
-              Detail →
-            </button>
-          </Link>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
-
+        )}
+      </div>
     </div>
   );
 }

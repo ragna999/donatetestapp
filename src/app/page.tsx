@@ -1,3 +1,4 @@
+// Tambahan: Import React jika diperlukan
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -14,6 +15,7 @@ type CampaignData = {
 };
 
 const FACTORY_ADDRESS = '0x7800BC9175383c47876Ce4cf4C6Fb947281d6187';
+
 const FACTORY_ABI = [
   {
     inputs: [],
@@ -34,31 +36,30 @@ const CAMPAIGN_ABI = [
 
 export default function HomePage() {
   const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
-  const [expanded, setExpanded] = useState<{ [addr: string]: boolean }>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  const toggleDesc = (addr: string) => {
-    setExpanded((prev) => ({
-      ...prev,
-      [addr]: !prev[addr],
-    }));
+  const toggleDescription = (address: string) => {
+    setExpanded((prev) => ({ ...prev, [address]: !prev[address] }));
   };
 
   useEffect(() => {
-    const fetchCampaigns = async () => {
+    const fetchData = async () => {
       try {
-        const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
+        const provider = new ethers.JsonRpcProvider(
+          'https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'
+        );
         const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
-        const addresses = await factory.getCampaigns();
+        const addresses: string[] = await factory.getCampaigns();
 
-        const details = await Promise.all(
-          addresses.map(async (addr: string) => {
-            const campaign = new Contract(addr, CAMPAIGN_ABI, provider);
-            const [title, description, image, goal, totalDonated] = await Promise.all([
-              campaign.title(),
-              campaign.description(),
-              campaign.image(),
-              campaign.goal(),
-              campaign.totalDonated(),
+        const results = await Promise.all(
+          addresses.map(async (addr) => {
+            const c = new Contract(addr, CAMPAIGN_ABI, provider);
+            const [title, description, image, goal, raised] = await Promise.all([
+              c.title(),
+              c.description(),
+              c.image(),
+              c.goal(),
+              c.totalDonated(),
             ]);
 
             return {
@@ -67,18 +68,18 @@ export default function HomePage() {
               description,
               image,
               goal: ethers.formatEther(goal),
-              raised: ethers.formatEther(totalDonated),
+              raised: ethers.formatEther(raised),
             };
           })
         );
 
-        setCampaigns(details);
-      } catch (err) {
-        console.error('❌ Gagal ambil data campaign:', err);
+        setCampaigns(results);
+      } catch (error) {
+        console.error('❌ Gagal ambil data campaign:', error);
       }
     };
 
-    fetchCampaigns();
+    fetchData();
   }, []);
 
   return (
@@ -93,6 +94,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 auto-rows-fr">
           {campaigns.map((c) => {
             const showFull = expanded[c.address];
+
             return (
               <div
                 key={c.address}
@@ -108,26 +110,40 @@ export default function HomePage() {
                   {c.title}
                 </h2>
 
-                {showFull ? (
-                  <p className="text-sm text-gray-300 mb-2">{c.description}</p>
-                ) : (
-                  <p className="text-sm text-gray-300 mb-2 line-clamp-2">{c.description}</p>
-                )}
+                <p className="text-sm text-gray-300 mb-2">
+                  {showFull ? c.description : (
+                    <>
+                      {c.description.length > 120 ? (
+                        <>
+                          {c.description.slice(0, 100)}...
+                          <button
+                            onClick={() => toggleDescription(c.address)}
+                            className="text-blue-400 text-xs ml-1 underline"
+                          >
+                            See more
+                          </button>
+                        </>
+                      ) : c.description}
+                    </>
+                  )}
+                </p>
 
-                {c.description.length > 100 && (
+                {showFull && c.description.length > 120 && (
                   <button
-                    onClick={() => toggleDesc(c.address)}
+                    onClick={() => toggleDescription(c.address)}
                     className="text-xs text-blue-400 hover:underline mb-3 text-left"
                   >
-                    {showFull ? 'See less' : 'See more'}
+                    See less
                   </button>
                 )}
 
-                <div className="mb-3">
+                <div className="mb-3 mt-1">
                   <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
                     <div
                       className="bg-emerald-400 h-full"
-                      style={{ width: `${(Number(c.raised) / Number(c.goal)) * 100}%` }}
+                      style={{
+                        width: `${(Number(c.raised) / Number(c.goal)) * 100}%`,
+                      }}
                     />
                   </div>
                   <p className="text-xs text-emerald-200 mt-2">
