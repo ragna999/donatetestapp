@@ -223,7 +223,7 @@ export default function ProfilePage() {
                   )}
 
                   <p className="text-xs text-emerald-300 mt-auto">
-                    💰 {c.raised} ETH dari {c.goal} ETH
+                    💰 {c.raised} STT dari {c.goal} STT
                   </p>
                 </div>
 

@@ -127,7 +127,7 @@ export default function HomePage() {
                   />
                 </div>
                 <p className="text-xs text-emerald-200 mt-2">
-                  🔥 {c.raised} ETH dari {c.goal} ETH
+                  🔥 {c.raised} STT dari {c.goal} STT
                 </p>
               </div>
 

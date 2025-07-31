@@ -153,7 +153,7 @@ export default function CampaignDetailPage() {
 
       <div className="mb-6">
         <p className="text-sm font-medium text-gray-400 mb-1">
-          {data.raised} ETH dari {data.goal} ETH
+          {data.raised} STT dari {data.goal} STT
         </p>
         <div className="w-full bg-gray-700 h-3 rounded-full overflow-hidden">
           <div
@@ -177,7 +177,7 @@ export default function CampaignDetailPage() {
       {currentAccount && (
         <form onSubmit={handleDonate} className="mb-10">
           <label className="block text-sm font-medium mb-2 text-gray-300">
-            Jumlah Donasi (ETH)
+            Jumlah Donasi (STT)
           </label>
           <input
             type="number"
@@ -216,7 +216,7 @@ export default function CampaignDetailPage() {
               <span className="font-mono text-gray-300">
                 {d.donor.slice(0, 6)}...{d.donor.slice(-4)}
               </span>
-              <span className="text-lime-400 font-semibold">{d.amount} ETH</span>
+              <span className="text-lime-400 font-semibold">{d.amount} STT</span>
             </li>
           ))}
         </ul>

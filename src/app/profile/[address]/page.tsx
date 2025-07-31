@@ -131,7 +131,7 @@ export default function OrganizerProfilePage() {
                   />
                 </div>
                 <p className="text-xs text-gray-400 mt-1">
-                  💰 {c.raised} ETH dari {c.goal} ETH
+                  💰 {c.raised} STT dari {c.goal} STT
                 </p>
               </div>
 

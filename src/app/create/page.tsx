@@ -135,7 +135,7 @@ export default function CreateCampaignPage() {
 
         {/* Target Dana */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Target Dana (ETH)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Target Dana (STT)</label>
           <input
             type="number"
             step="any"
