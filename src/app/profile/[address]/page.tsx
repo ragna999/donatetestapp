@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { Contract, ethers } from 'ethers';
 import Link from 'next/link';
 
-const FACTORY_ADDRESS = '0x7800BC9175383c47876Ce4cf4C6Fb947281d6187';
+const FACTORY_ADDRESS = '0xbdc6284b97146954ed8938a627de9dec42f65e60';
 
 const FACTORY_ABI = [
   {
@@ -35,7 +35,7 @@ export default function OrganizerProfilePage() {
   useEffect(() => {
     if (!address || !ethers.isAddress(address)) return;
 
-    const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
+    const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
 
     const fetchCampaigns = async () => {
       try {
@@ -88,7 +88,7 @@ export default function OrganizerProfilePage() {
       <p className="mb-8 text-sm text-gray-400">
         Wallet:{' '}
         <a
-          href={`https://sepolia.etherscan.io/address/${address}`}
+          href={`https://shannon-explorer.somnia.network/address/${address}`}
           className="text-blue-400 hover:underline break-all font-mono"
         >
           {address}

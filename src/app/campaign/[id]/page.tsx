@@ -45,7 +45,7 @@ export default function CampaignDetailPage() {
     const fetchData = async () => {
       try {
         if (!id || !ethers.isAddress(id)) return;
-        const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
+        const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
         const contract = new Contract(id, CAMPAIGN_ABI, provider);
 
         const [title, description, image, goal, totalDonated, creator, donationsRaw] = await Promise.all([

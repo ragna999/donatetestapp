@@ -13,7 +13,7 @@ type CampaignData = {
   raised: string;
 };
 
-const FACTORY_ADDRESS = '0x7800BC9175383c47876Ce4cf4C6Fb947281d6187';
+const FACTORY_ADDRESS = '0xbdc6284b97146954ed8938a627de9dec42f65e60';
 
 const FACTORY_ABI = [
   {
@@ -45,7 +45,7 @@ export default function HomePage() {
     const fetchData = async () => {
       try {
         const provider = new ethers.JsonRpcProvider(
-          'https://rpc.ankr.com/eth_sepolia/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'
+          'https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'
         );
         const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
         const addresses: string[] = await factory.getCampaigns();
