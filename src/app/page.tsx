@@ -135,7 +135,7 @@ export default function HomePage() {
 
               <Link href={`/campaign/${c.address}`}>
                 <button className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white py-2 rounded-xl text-sm hover:scale-[1.03] transition-all font-semibold">
-                  🚀 Lihat Detail
+                  Lihat Detail
                 </button>
               </Link>
             </div>
