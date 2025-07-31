@@ -19,7 +19,7 @@ export default function Navbar() {
       <div className="flex justify-between items-center max-w-7xl mx-auto">
         {/* Logo */}
         <Link href="/" className="text-2xl font-extrabold text-blue-700 tracking-tight">
-          🌐 DonasiChain
+        🌱Donatree
         </Link>
 
         {/* Hamburger button */}
