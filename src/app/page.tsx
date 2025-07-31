@@ -84,7 +84,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-[#0f172a] text-white py-12 px-6">
       <h1 className="text-4xl font-bold mb-12 text-center tracking-wide font-mono">
-        🧬 Web3 Campaign Explorer
+        Web3 Campaign Explorer
       </h1>
 
       {campaigns.length === 0 ? (
