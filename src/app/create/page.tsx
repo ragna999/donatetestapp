@@ -4,44 +4,214 @@ import React, { useState } from 'react';
 import { ethers } from 'ethers';
 import { uploadToPinata } from '../utils/uploadToPinata';
 
-
 const FACTORY_ADDRESS = '0xbdc6284b97146954ed8938a627de9dec42f65e60';
+
 const CAMPAIGN_ABI = [
-  {
-    inputs: [
-      { internalType: 'string', name: '_title', type: 'string' },
-      { internalType: 'string', name: '_description', type: 'string' },
-      { internalType: 'string', name: '_image', type: 'string' }, // ✅ Tambahan
-      { internalType: 'uint256', name: '_goal', type: 'uint256' },
-    ],
-    name: 'createCampaign',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'getCampaigns',
-    outputs: [{ internalType: 'address[]', name: '', type: 'address[]' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: false, internalType: 'address', name: 'campaignAddress', type: 'address' },
-      { indexed: false, internalType: 'address', name: 'creator', type: 'address' },
-    ],
-    name: 'CampaignCreated',
-    type: 'event',
-  },
-];
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_adminContract",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "campaignAddress",
+				"type": "address"
+			}
+		],
+		"name": "CampaignApproved",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "campaignAddress",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "creator",
+				"type": "address"
+			}
+		],
+		"name": "CampaignCreated",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "adminContract",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_campaign",
+				"type": "address"
+			}
+		],
+		"name": "approveCampaign",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "campaignToCreator",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "campaigns",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "_title",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_desc",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_image",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_goal",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "_location",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_duration",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "_social",
+				"type": "string"
+			}
+		],
+		"name": "createCampaign",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getAllCampaigns",
+		"outputs": [
+			{
+				"internalType": "address[]",
+				"name": "",
+				"type": "address[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getApprovedCampaigns",
+		"outputs": [
+			{
+				"internalType": "address[]",
+				"name": "result",
+				"type": "address[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "isApproved",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+]
 
 
 export default function CreateCampaignPage() {
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [goal, setGoal] = useState('');
+  const [location, setLocation] = useState('');
+  const [duration, setDuration] = useState('');
+  const [social, setSocial] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -70,29 +240,33 @@ export default function CreateCampaignPage() {
       const eth = (window as any).ethereum;
       if (!eth) return alert('❌ Wallet tidak ditemukan');
 
-      let selectedProvider = eth;
-      if (eth.providers?.length) {
-        const metamask = eth.providers.find((p: any) => p.isMetaMask);
-        if (!metamask) return alert('❌ MetaMask tidak ditemukan');
-        selectedProvider = metamask;
-      }
-
-      await selectedProvider.request({ method: 'eth_requestAccounts' });
-
-      const provider = new ethers.BrowserProvider(selectedProvider);
+      await eth.request({ method: 'eth_requestAccounts' });
+      const provider = new ethers.BrowserProvider(eth);
       const signer = await provider.getSigner();
       const factory = new ethers.Contract(FACTORY_ADDRESS, CAMPAIGN_ABI, signer);
 
       const goalInWei = ethers.parseEther(goal);
+      const durationInSeconds = parseInt(duration) * 86400; // convert hari ke detik
 
-      const tx = await factory.createCampaign(title, desc, imageUrl, goalInWei);
+      const tx = await factory.createCampaign(
+        title,
+        desc,
+        imageUrl || '',
+        goalInWei,
+        location,
+        durationInSeconds,
+        social
+      );
 
       await tx.wait();
-
       alert('✅ Kampanye berhasil dibuat!');
+
       setTitle('');
       setDesc('');
       setGoal('');
+      setLocation('');
+      setDuration('');
+      setSocial('');
       setImageUrl(null);
     } catch (err: any) {
       console.error(err);
@@ -106,66 +280,33 @@ export default function CreateCampaignPage() {
     <div className="max-w-xl mx-auto mt-10 p-6 bg-white rounded shadow text-gray-800">
       <h1 className="text-2xl font-bold mb-6 text-center">🚀 Buat Kampanye Donasi</h1>
       <form onSubmit={handleSubmit} className="space-y-5">
-
-        {/* Judul */}
+        {/* Title */}
+        <Input label="Judul Kampanye" value={title} onChange={setTitle} loading={loading} />
+        {/* Description */}
+        <TextArea label="Deskripsi" value={desc} onChange={setDesc} loading={loading} />
+        {/* Target */}
+        <Input label="Target Dana (STT)" value={goal} onChange={setGoal} loading={loading} type="number" />
+        {/* Lokasi */}
+        <Input label="Lokasi Penerima/Bencana" value={location} onChange={setLocation} loading={loading} />
+        {/* Durasi */}
+        <Input label="Durasi Kampanye (hari)" value={duration} onChange={setDuration} loading={loading} type="number" />
+        {/* Sosial Media */}
+        <Input label="Link Sosmed Penyelenggara" value={social} onChange={setSocial} loading={loading} />
+        {/* Gambar */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Judul Kampanye</label>
-          <input
-            type="text"
-            className="w-full border border-gray-300 px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            disabled={loading}
-          />
-        </div>
-
-        {/* Deskripsi */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
-          <textarea
-            className="w-full border border-gray-300 px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            rows={4}
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-            required
-            disabled={loading}
-          />
-        </div>
-
-        {/* Target Dana */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Target Dana (STT)</label>
-          <input
-            type="number"
-            step="any"
-            className="w-full border border-gray-300 px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={goal}
-            onChange={(e) => setGoal(e.target.value)}
-            required
-            disabled={loading}
-          />
-        </div>
-
-        {/* Upload Gambar */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Upload Gambar Campaign</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Upload Gambar</label>
           <input
             type="file"
             accept="image/*"
             onChange={handleImageUpload}
             disabled={uploading || loading}
             className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4
-              file:rounded file:border-0 file:text-sm file:font-semibold
-              file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              file:rounded file:border-0 file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
           />
           {uploading && <p className="text-sm text-blue-400 mt-2">Uploading to IPFS...</p>}
-          {imageUrl && (
-            <img src={imageUrl} alt="Preview" className="mt-4 rounded-md w-full h-56 object-cover border" />
-          )}
+          {imageUrl && <img src={imageUrl} alt="Preview" className="mt-4 rounded-md w-full h-56 object-cover border" />}
         </div>
-
-        {/* Submit Button */}
+        {/* Submit */}
         <button
           type="submit"
           disabled={loading}
@@ -176,6 +317,38 @@ export default function CreateCampaignPage() {
           {loading ? '⏳ Mengirim...' : '✨ Buat Kampanye'}
         </button>
       </form>
+    </div>
+  );
+}
+
+function Input({ label, value, onChange, loading, type = 'text' }: any) {
+  return (
+    <div>
+      <label className="block text-sm text-gray-700 mb-1">{label}</label>
+      <input
+        type={type}
+        className="w-full border border-gray-300 px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required
+        disabled={loading}
+      />
+    </div>
+  );
+}
+
+function TextArea({ label, value, onChange, loading }: any) {
+  return (
+    <div>
+      <label className="block text-sm text-gray-700 mb-1">{label}</label>
+      <textarea
+        className="w-full border border-gray-300 px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        rows={4}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required
+        disabled={loading}
+      />
     </div>
   );
 }
