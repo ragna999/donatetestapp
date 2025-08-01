@@ -211,7 +211,6 @@ export default function CreateCampaignPage() {
   const [goal, setGoal] = useState('');
   const [location, setLocation] = useState('');
   const [duration, setDuration] = useState('');
-  const [social, setSocial] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -232,49 +231,49 @@ export default function CreateCampaignPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  // ...
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      const eth = (window as any).ethereum;
-      if (!eth) return alert('❌ Wallet tidak ditemukan');
+  try {
+    const eth = (window as any).ethereum;
+    if (!eth) return alert('❌ Wallet tidak ditemukan');
 
-      await eth.request({ method: 'eth_requestAccounts' });
-      const provider = new ethers.BrowserProvider(eth);
-      const signer = await provider.getSigner();
-      const factory = new ethers.Contract(FACTORY_ADDRESS, CAMPAIGN_ABI, signer);
+    await eth.request({ method: 'eth_requestAccounts' });
+    const provider = new ethers.BrowserProvider(eth);
+    const signer = await provider.getSigner();
+    const factory = new ethers.Contract(FACTORY_ADDRESS, CAMPAIGN_ABI, signer);
 
-      const goalInWei = ethers.parseEther(goal);
-      const durationInSeconds = parseInt(duration) * 86400; // convert hari ke detik
+    const goalInWei = ethers.parseEther(goal);
+    const durationInSeconds = parseInt(duration) * 86400;
 
-      const tx = await factory.createCampaign(
-        title,
-        desc,
-        imageUrl || '',
-        goalInWei,
-        location,
-        durationInSeconds,
-        social
-      );
+    const tx = await factory.createCampaign(
+      title,
+      desc,
+      imageUrl || '',
+      goalInWei,
+      location,
+      durationInSeconds
+    );
 
-      await tx.wait();
-      alert('✅ Kampanye berhasil dibuat!');
+    await tx.wait();
+    alert('✅ Kampanye berhasil dibuat!');
 
-      setTitle('');
-      setDesc('');
-      setGoal('');
-      setLocation('');
-      setDuration('');
-      setSocial('');
-      setImageUrl(null);
-    } catch (err: any) {
-      console.error(err);
-      alert('❌ Gagal membuat campaign: ' + (err.message || err));
-    } finally {
-      setLoading(false);
-    }
-  };
+    setTitle('');
+    setDesc('');
+    setGoal('');
+    setLocation('');
+    setDuration('');
+    setImageUrl(null);
+  } catch (err: any) {
+    console.error(err);
+    alert('❌ Gagal membuat campaign: ' + (err.message || err));
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="max-w-xl mx-auto mt-10 p-6 bg-white rounded shadow text-gray-800">
@@ -290,8 +289,6 @@ export default function CreateCampaignPage() {
         <Input label="Lokasi Penerima/Bencana" value={location} onChange={setLocation} loading={loading} />
         {/* Durasi */}
         <Input label="Durasi Kampanye (hari)" value={duration} onChange={setDuration} loading={loading} type="number" />
-        {/* Sosial Media */}
-        <Input label="Link Sosmed Penyelenggara" value={social} onChange={setSocial} loading={loading} />
         {/* Gambar */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Upload Gambar</label>
