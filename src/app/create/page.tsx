@@ -258,7 +258,8 @@ export default function CreateCampaignPage() {
         imageUrl || '',
         goalInWei,
         location,
-        durationInSeconds
+        durationInSeconds,
+        ""
       );
   
       await tx.wait();
