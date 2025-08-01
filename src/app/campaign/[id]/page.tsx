@@ -40,7 +40,9 @@ export default function CampaignDetailPage() {
   const [currentAccount, setCurrentAccount] = useState('');
   const [isOwner, setIsOwner] = useState(false);
   const [ready, setReady] = useState(false);
-
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState('');
+  
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -78,6 +80,19 @@ export default function CampaignDetailPage() {
 
 
         setReady(true);
+
+
+        const commentsKey = `commentsHash_${id}`;
+const hash = localStorage.getItem(commentsKey);
+if (hash) {
+  try {
+    const result = await fetchCommentsFromIPFS(hash);
+    setComments(result);
+  } catch (err) {
+    console.warn('❌ Gagal load komentar:', err);
+  }
+}
+
 
         if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
           try {
@@ -128,6 +143,37 @@ export default function CampaignDetailPage() {
       alert('Withdraw gagal');
     }
   };
+
+  //comment sections 
+
+  const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT!;
+
+async function uploadCommentsToIPFS(comments: any[]) {
+  const res = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: PINATA_JWT,
+    },
+    body: JSON.stringify({
+      pinataMetadata: { name: 'donatree-comments' },
+      pinataContent: comments,
+    }),
+  });
+
+  if (!res.ok) throw new Error('Gagal upload komentar ke IPFS');
+  const data = await res.json();
+  return data.IpfsHash;
+}
+
+async function fetchCommentsFromIPFS(hash: string) {
+  const res = await fetch(`https://gateway.pinata.cloud/ipfs/${hash}`);
+  if (!res.ok) throw new Error('Gagal fetch komentar dari IPFS');
+  return await res.json();
+}
+
+//end comment 
+
 
   if (!ready) return <p className="p-6 text-white">Loading campaign...</p>;
 
@@ -221,6 +267,66 @@ export default function CampaignDetailPage() {
           ))}
         </ul>
       </div>
+      
+      <div className="mt-12">
+  <h2 className="text-lg font-semibold mb-4">💬 Komentar</h2>
+
+  {comments.length === 0 ? (
+    <p className="text-gray-500 text-sm mb-4">Belum ada komentar.</p>
+  ) : (
+    <ul className="space-y-3 mb-6">
+      {comments.map((c, i) => (
+        <li key={i} className="bg-gray-800 p-3 rounded border border-gray-700 text-sm">
+          <div className="text-xs text-gray-400 mb-1 font-mono">
+            {c.author.slice(0, 6)}...{c.author.slice(-4)} • {new Date(c.timestamp).toLocaleString()}
+          </div>
+          <p className="text-white">{c.text}</p>
+        </li>
+      ))}
+    </ul>
+  )}
+
+  {currentAccount && (
+    <div className="mt-4">
+      <textarea
+        className="w-full p-3 bg-gray-800 text-white rounded border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        rows={3}
+        placeholder="Tulis komentar..."
+        value={newComment}
+        onChange={(e) => setNewComment(e.target.value)}
+      />
+      <button
+        className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white font-semibold"
+        onClick={async () => {
+          if (!newComment.trim()) return;
+
+          const nextComments = [
+            ...comments,
+            {
+              author: currentAccount,
+              text: newComment.trim(),
+              timestamp: Date.now(),
+            },
+          ];
+
+          try {
+            const hash = await uploadCommentsToIPFS(nextComments);
+            localStorage.setItem(`commentsHash_${id}`, hash);
+            setComments(nextComments);
+            setNewComment('');
+          } catch (err) {
+            alert('Gagal upload komentar');
+            console.error(err);
+          }
+        }}
+      >
+        Kirim Komentar
+      </button>
+    </div>
+  )}
+</div>
+
+
     </div>
   );
 }
