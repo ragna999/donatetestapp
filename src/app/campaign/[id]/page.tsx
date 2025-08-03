@@ -1,4 +1,4 @@
-// Final version of CampaignDetailPage.tsx with all user features intact
+// Final fixed version of CampaignDetailPage.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -34,8 +34,6 @@ const CAMPAIGN_ABI = [
   { name: 'withdraw', type: 'function', stateMutability: 'nonpayable', inputs: [], outputs: [] },
 ];
 
-
-
 export default function CampaignDetailPage() {
   const params = useParams();
   const id = params?.id as string;
@@ -50,58 +48,35 @@ export default function CampaignDetailPage() {
   const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
-    if (!id || !ethers.isAddress(id)) {
-      console.warn('⚠️ ID belum valid:', id);
-      return;
-    }
-  
+    if (!id || !ethers.isAddress(id)) return;
+
     const fetchData = async () => {
-      console.log('🔄 Mulai fetch campaign data...');
-  
       try {
         const provider = new ethers.JsonRpcProvider(
           'https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'
         );
-  
+
         const bytecode = await provider.getCode(id);
-        console.log('📦 Bytecode:', bytecode);
-  
-        if (bytecode === '0x') throw new Error('❌ Ini bukan smart contract (EOA)');
-  
+        if (bytecode === '0x') throw new Error('❌ Address bukan contract');
+
         const contract = new Contract(id, CAMPAIGN_ABI, provider);
-  
-        console.log('🧠 Available functions:', Object.keys(contract.functions));
-  
+
         const title = await contract.title();
-        console.log('✅ title:', title);
-  
-        const [
-          description,
-          image,
-          goal,
-          totalDonated,
-          creator,
-          location,
-          deadline,
-          donationsRaw,
-          social
-        ] = await Promise.all([
-          contract.description(),
-          contract.image(),
-          contract.goal(),
-          contract.totalDonated(),
-          contract.creator(),
-          contract.location(),
-          contract.deadline(),
-          contract.getDonations(),
-          contract.social()
-        ]);
-  
+        const description = await contract.description();
+        const image = await contract.image();
+        const goal = await contract.goal();
+        const totalDonated = await contract.totalDonated();
+        const creator = await contract.creator();
+        const location = await contract.location();
+        const deadline = await contract.deadline();
+        const social = await contract.social();
+        const donationsRaw = await contract.getDonations();
+
         const donations = donationsRaw.map((d: any) => ({
           donor: d.donor,
           amount: ethers.formatEther(d.amount),
         }));
-  
+
         setData({
           title,
           description,
@@ -114,17 +89,54 @@ export default function CampaignDetailPage() {
           social,
           donations,
         });
-  
-        console.log('✅ Data berhasil di-fetch, setting ready...');
+
         setReady(true);
+
+        if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
+          const browserProvider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await browserProvider.getSigner();
+          const signerAddress = await signer.getAddress();
+          setCurrentAccount(signerAddress);
+          if (signerAddress.toLowerCase() === creator.toLowerCase()) {
+            setIsOwner(true);
+          }
+        }
+
+        const commentsKey = `commentsHash_${id}`;
+        const hash = localStorage.getItem(commentsKey);
+        if (hash) {
+          const result = await fetchCommentsFromIPFS(hash);
+          setComments(result);
+        }
       } catch (err) {
         console.error('❌ Error fetching campaign detail:', err);
       }
     };
-  
+
     fetchData();
   }, [id]);
-  
+
+  useEffect(() => {
+    if (!data?.deadline) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const diff = data.deadline * 1000 - now;
+
+      if (diff <= 0) {
+        setTimeLeft('⏱️ Campaign telah selesai');
+        clearInterval(interval);
+      } else {
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((diff / (1000 * 60)) % 60);
+        const seconds = Math.floor((diff / 1000) % 60);
+        setTimeLeft(`${days}h ${hours}j ${minutes}m ${seconds}s`);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [data?.deadline]);
 
   const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT!;
 
