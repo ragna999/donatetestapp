@@ -6,48 +6,30 @@ import { usePrivy } from '@privy-io/react-auth';
 import Link from 'next/link';
 
 const FACTORY_ADDRESS = '0x67406856cdE16b43DEf56EaB3CD6A6c678537878';
+
 const FACTORY_ABI = [
-	{
-	  "inputs": [
-		{ "internalType": "address", "name": "_campaign", "type": "address" }
-	  ],
-	  "name": "approveCampaign",
-	  "outputs": [],
-	  "stateMutability": "nonpayable",
-	  "type": "function"
-	},
-	{
-	  "inputs": [],
-	  "name": "getAllCampaigns",
-	  "outputs": [
-		{ "internalType": "address[]", "name": "", "type": "address[]" }
-	  ],
-	  "stateMutability": "view",
-	  "type": "function"
-	},
-	{
-	  "inputs": [
-		{ "internalType": "address", "name": "", "type": "address" }
-	  ],
-	  "name": "isApproved",
-	  "outputs": [
-		{ "internalType": "bool", "name": "", "type": "bool" }
-	  ],
-	  "stateMutability": "view",
-	  "type": "function"
-	},
-	{
-	  "inputs": [],
-	  "name": "getApprovedCampaigns",
-	  "outputs": [
-		{ "internalType": "address[]", "name": "result", "type": "address[]" }
-	  ],
-	  "stateMutability": "view",
-	  "type": "function"
-	},
-	// kamu boleh tambahin `createCampaign`, `campaignToCreator`, dst juga kalau dipakai di file ini
-  ];
-  
+  {
+    name: 'getAllCampaigns',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address[]', name: '' }],
+  },
+  {
+    name: 'isApproved',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: '', type: 'address' }],
+    outputs: [{ type: 'bool', name: '' }],
+  },
+  {
+    name: 'approveCampaign',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: '_campaign', type: 'address' }],
+    outputs: [],
+  },
+];
 
 const CAMPAIGN_ABI = [
   { name: 'title', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
@@ -58,7 +40,7 @@ const CAMPAIGN_ABI = [
 ];
 
 export default function AdminDashboard() {
-  const { user, authenticated, ready } = usePrivy();
+  const { authenticated, ready } = usePrivy();
   const [pendingCampaigns, setPendingCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -116,7 +98,7 @@ export default function AdminDashboard() {
       const tx = await factory.approveCampaign(address);
       await tx.wait();
       alert('✅ Campaign berhasil di-approve!');
-      fetchPendingCampaigns(); // refresh
+      fetchPendingCampaigns(); // refresh list
     } catch (err) {
       console.error('❌ Gagal approve:', err);
       alert('❌ Gagal approve campaign.');
