@@ -23,7 +23,21 @@ const FACTORY_ABI = [
     outputs: [{ type: 'bool', name: '' }],
   },
   {
+    name: 'deniedCampaigns',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: '', type: 'address' }],
+    outputs: [{ type: 'bool', name: '' }],
+  },
+  {
     name: 'approveCampaign',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: '_campaign', type: 'address' }],
+    outputs: [],
+  },
+  {
+    name: 'denyCampaign',
     type: 'function',
     stateMutability: 'nonpayable',
     inputs: [{ name: '_campaign', type: 'address' }],
@@ -55,8 +69,11 @@ export default function AdminDashboard() {
 
       const result = await Promise.all(
         allAddresses.map(async (addr) => {
-          const approved = await factory.isApproved(addr);
-          if (approved) return null;
+          const [approved, denied] = await Promise.all([
+            factory.isApproved(addr),
+            factory.deniedCampaigns(addr)
+          ]);
+          if (approved || denied) return null;
 
           const campaign = new ethers.Contract(addr, CAMPAIGN_ABI, rpcProvider);
           const [title, description, image, goal, creator] = await Promise.all([
@@ -87,31 +104,49 @@ export default function AdminDashboard() {
   };
 
   const handleApprove = async (address: string) => {
-	try {
-	  const eth = (window as any).ethereum;
-	  if (!eth) return alert('❌ Wallet tidak ditemukan');
-  
-	  // Cek apakah wallet udah connect
-	  const accounts = await eth.request({ method: 'eth_accounts' });
-	  if (!accounts || accounts.length === 0) {
-		await eth.request({ method: 'eth_requestAccounts' });
-	  }
-  
-	  const provider = new ethers.BrowserProvider(eth);
-	  const signer = await provider.getSigner();
-	  const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
-  
-	  const tx = await factory.approveCampaign(address);
-	  await tx.wait();
-  
-	  alert('✅ Campaign berhasil di-approve!');
-	  fetchPendingCampaigns(); // Refresh list
-	} catch (err: any) {
-	  console.error('❌ Gagal approve:', err);
-	  alert('❌ Gagal approve campaign: ' + (err.message || err));
-	}
+    try {
+      const eth = (window as any).ethereum;
+      if (!eth) return alert('❌ Wallet tidak ditemukan');
+
+      const accounts = await eth.request({ method: 'eth_accounts' });
+      if (!accounts || accounts.length === 0) {
+        await eth.request({ method: 'eth_requestAccounts' });
+      }
+
+      const provider = new ethers.BrowserProvider(eth);
+      const signer = await provider.getSigner();
+      const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
+
+      const tx = await factory.approveCampaign(address);
+      await tx.wait();
+
+      alert('✅ Campaign berhasil di-approve!');
+      fetchPendingCampaigns();
+    } catch (err: any) {
+      console.error('❌ Gagal approve:', err);
+      alert('❌ Gagal approve campaign: ' + (err.message || err));
+    }
   };
-  
+
+  const handleDeny = async (address: string) => {
+    try {
+      const eth = (window as any).ethereum;
+      if (!eth) return alert('❌ Wallet tidak ditemukan');
+
+      const provider = new ethers.BrowserProvider(eth);
+      const signer = await provider.getSigner();
+      const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
+
+      const tx = await factory.denyCampaign(address);
+      await tx.wait();
+
+      alert('⛔ Campaign berhasil ditolak!');
+      fetchPendingCampaigns();
+    } catch (err: any) {
+      console.error('❌ Gagal deny:', err);
+      alert('❌ Gagal menolak campaign: ' + (err.message || err));
+    }
+  };
 
   useEffect(() => {
     if (authenticated) fetchPendingCampaigns();
@@ -140,12 +175,20 @@ export default function AdminDashboard() {
                 <Link href={`/campaign/${c.address}`}>
                   <p className="text-blue-600 text-xs hover:underline mb-2">Lihat Detail</p>
                 </Link>
-                <button
-                  onClick={() => handleApprove(c.address)}
-                  className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded mt-auto w-full"
-                >
-                  ✅ Approve Campaign
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => handleApprove(c.address)}
+                    className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded"
+                  >
+                    ✅ Approve Campaign
+                  </button>
+                  <button
+                    onClick={() => handleDeny(c.address)}
+                    className="bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded"
+                  >
+                    ❌ Tolak Campaign
+                  </button>
+                </div>
               </div>
             ))}
           </div>
