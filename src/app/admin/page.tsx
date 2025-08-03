@@ -8,196 +8,46 @@ import Link from 'next/link';
 const FACTORY_ADDRESS = '0x67406856cdE16b43DEf56EaB3CD6A6c678537878';
 const FACTORY_ABI = [
 	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_campaign",
-				"type": "address"
-			}
-		],
-		"name": "approveCampaign",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
+	  "inputs": [
+		{ "internalType": "address", "name": "_campaign", "type": "address" }
+	  ],
+	  "name": "approveCampaign",
+	  "outputs": [],
+	  "stateMutability": "nonpayable",
+	  "type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_adminContract",
-				"type": "address"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
+	  "inputs": [],
+	  "name": "getAllCampaigns",
+	  "outputs": [
+		{ "internalType": "address[]", "name": "", "type": "address[]" }
+	  ],
+	  "stateMutability": "view",
+	  "type": "function"
 	},
 	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "campaignAddress",
-				"type": "address"
-			}
-		],
-		"name": "CampaignApproved",
-		"type": "event"
+	  "inputs": [
+		{ "internalType": "address", "name": "", "type": "address" }
+	  ],
+	  "name": "isApproved",
+	  "outputs": [
+		{ "internalType": "bool", "name": "", "type": "bool" }
+	  ],
+	  "stateMutability": "view",
+	  "type": "function"
 	},
 	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "campaignAddress",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "creator",
-				"type": "address"
-			}
-		],
-		"name": "CampaignCreated",
-		"type": "event"
+	  "inputs": [],
+	  "name": "getApprovedCampaigns",
+	  "outputs": [
+		{ "internalType": "address[]", "name": "result", "type": "address[]" }
+	  ],
+	  "stateMutability": "view",
+	  "type": "function"
 	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "_title",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "_desc",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "_image",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_goal",
-				"type": "uint256"
-			},
-			{
-				"internalType": "string",
-				"name": "_location",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_duration",
-				"type": "uint256"
-			}
-		],
-		"name": "createCampaign",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "adminContract",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "campaigns",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "campaignToCreator",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "getAllCampaigns",
-		"outputs": [
-			{
-				"internalType": "address[]",
-				"name": "",
-				"type": "address[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "getApprovedCampaigns",
-		"outputs": [
-			{
-				"internalType": "address[]",
-				"name": "result",
-				"type": "address[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "isApproved",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	}
-]
+	// kamu boleh tambahin `createCampaign`, `campaignToCreator`, dst juga kalau dipakai di file ini
+  ];
+  
 
 const CAMPAIGN_ABI = [
   { name: 'title', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
