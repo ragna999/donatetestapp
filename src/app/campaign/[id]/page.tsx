@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ethers, Contract } from 'ethers';
+import { usePrivy } from '@privy-io/react-auth';
 
 const CAMPAIGN_ABI = [
   { name: 'title', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
@@ -63,7 +64,6 @@ export default function CampaignDetailPage() {
           creator,
           location,
           deadline,
-          social,
           donationsRaw
         ] = await Promise.all([
           contract.title(),
@@ -74,11 +74,13 @@ export default function CampaignDetailPage() {
           contract.creator(),
           contract.location(),
           contract.deadline(),
-          contract.social(),
           contract.getDonations(),
         ]);
         
-
+        const { user } = usePrivy();
+        const social = user?.twitter?.username
+  ? `https://twitter.com/${user.twitter.username}`
+  : '';
 
         const donations = Array.isArray(donationsRaw)
           ? donationsRaw.map((d: any) => ({
