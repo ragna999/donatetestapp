@@ -1,213 +1,42 @@
-// Final fixed version of CampaignDetailPage.tsx
+// Final FIXED CampaignDetailPage.tsx — ABI matched with DonationCampaign
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ethers, Contract } from 'ethers';
 
-const CAMPAIGN_ABI = 
-[
+const CAMPAIGN_ABI = [
+  { name: 'title', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
+  { name: 'description', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
+  { name: 'image', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
+  { name: 'goal', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+  { name: 'totalDonated', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+  { name: 'creator', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] },
+  { name: 'location', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
+  { name: 'deadline', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+  { name: 'social', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
   {
-    "inputs": [
+    name: 'getDonations',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [
       {
-        "internalType": "address",
-        "name": "_adminContract",
-        "type": "address"
+        type: 'tuple[]',
+        components: [
+          { name: 'donor', type: 'address' },
+          { name: 'amount', type: 'uint256' }
+        ]
       }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
+    ]
   },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "campaignAddress",
-        "type": "address"
-      }
-    ],
-    "name": "CampaignApproved",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "campaignAddress",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "creator",
-        "type": "address"
-      }
-    ],
-    "name": "CampaignCreated",
-    "type": "event"
-  },
-  {
-    "inputs": [],
-    "name": "adminContract",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_campaign",
-        "type": "address"
-      }
-    ],
-    "name": "approveCampaign",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "campaignToCreator",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "campaigns",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "_title",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "_desc",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "_image",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_goal",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "_location",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_duration",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "_social",
-        "type": "string"
-      }
-    ],
-    "name": "createCampaign",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getAllCampaigns",
-    "outputs": [
-      {
-        "internalType": "address[]",
-        "name": "",
-        "type": "address[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getApprovedCampaigns",
-    "outputs": [
-      {
-        "internalType": "address[]",
-        "name": "result",
-        "type": "address[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "isApproved",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-]
-
+  { name: 'donate', type: 'function', stateMutability: 'payable', inputs: [], outputs: [] },
+  { name: 'withdraw', type: 'function', stateMutability: 'nonpayable', inputs: [], outputs: [] }
+];
 
 export default function CampaignDetailPage() {
   const params = useParams();
-  const id = params?.id as string;
+  const id = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '';
 
   const [data, setData] = useState<any>(null);
   const [donationAmount, setDonationAmount] = useState('');
@@ -219,36 +48,18 @@ export default function CampaignDetailPage() {
   const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
-    
-
     const fetchData = async () => {
       try {
-        if (!id || !ethers.isAddress(id)) return;
-        console.log('🚀 Starting fetchData...');
-        const provider = new ethers.JsonRpcProvider(
-          'https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'
-        );
-    
-        if (!id || !ethers.isAddress(id)) {
-          console.warn('❗ Invalid ID:', id);
-          return;
-        }
-    
-        const bytecode = await provider.getCode(id);
-        console.log('📦 Bytecode:', bytecode);
-    
-        if (bytecode === '0x') throw new Error('❌ Bukan smart contract');
-    
-        const contract = new ethers.Contract(id, CAMPAIGN_ABI, provider);
-        console.log('🧠 Functions:', Object.keys(contract.functions));
-    
-        // panggil satu-satu dan log
+        if (!id || !ethers.isAddress(id)) throw new Error('Invalid address');
+
+        const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/somnia_testnet/...');
+        const code = await provider.getCode(id);
+        if (code === '0x') throw new Error('Address is not a contract');
+
+        const contract = new Contract(id, CAMPAIGN_ABI, provider);
+
         const title = await contract.title();
-        console.log('✅ title:', title);
-    
         const description = await contract.description();
-        console.log('✅ description:', description);
-    
         const image = await contract.image();
         const goal = await contract.goal();
         const totalDonated = await contract.totalDonated();
@@ -257,12 +68,12 @@ export default function CampaignDetailPage() {
         const deadline = await contract.deadline();
         const social = await contract.social();
         const donationsRaw = await contract.getDonations();
-    
+
         const donations = donationsRaw.map((d: any) => ({
           donor: d.donor,
           amount: ethers.formatEther(d.amount),
         }));
-    
+
         setData({
           title,
           description,
@@ -273,40 +84,52 @@ export default function CampaignDetailPage() {
           location,
           deadline: Number(deadline),
           social,
-          donations,
+          donations
         });
-    
+
         setReady(true);
-        console.log('✅ Ready set to true');
-    
+
+        if (window.ethereum) {
+          const browserProvider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await browserProvider.getSigner();
+          const address = await signer.getAddress();
+          setCurrentAccount(address);
+          if (address.toLowerCase() === creator.toLowerCase()) {
+            setIsOwner(true);
+          }
+        }
+
+        const hash = localStorage.getItem(`commentsHash_${id}`);
+        if (hash) {
+          const res = await fetch(`https://gateway.pinata.cloud/ipfs/${hash}`);
+          const parsed = await res.json();
+          setComments(parsed);
+        }
+
       } catch (err) {
         console.error('❌ fetchData error:', err);
       }
     };
-    
 
     fetchData();
   }, [id]);
 
   useEffect(() => {
     if (!data?.deadline) return;
-
     const interval = setInterval(() => {
       const now = Date.now();
       const diff = data.deadline * 1000 - now;
-
       if (diff <= 0) {
         setTimeLeft('⏱️ Campaign telah selesai');
         clearInterval(interval);
       } else {
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-        const minutes = Math.floor((diff / (1000 * 60)) % 60);
-        const seconds = Math.floor((diff / 1000) % 60);
-        setTimeLeft(`${days}h ${hours}j ${minutes}m ${seconds}s`);
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const m = Math.floor((diff / (1000 * 60)) % 60);
+        const s = Math.floor((diff / 1000) % 60);
+        setTimeLeft(`${d}h ${h}j ${m}m ${s}s`);
       }
     }, 1000);
-
     return () => clearInterval(interval);
   }, [data?.deadline]);
 
@@ -368,7 +191,9 @@ export default function CampaignDetailPage() {
 
   if (!ready || !data) {
     console.log('📛 Masih loading: ready =', ready, 'data =', data);
-    return <p className="p-6 text-white">Loading campaign...</p>;
+    return !ready || !data ? <p className="p-6 text-white">Loading campaign...</p>:(
+      <div className="min-h-screen text-white p-6">✅ Ready: {data.title}</div>
+  );
   }
   
 
