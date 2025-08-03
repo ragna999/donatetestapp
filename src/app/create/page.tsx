@@ -70,7 +70,9 @@ const CAMPAIGN_ABI = [
 				"name": "_title",
 				"type": "string"
 			},
-			{ "internalType": "string", "name": "_social", "type": "string" },
+			{ "internalType": "string", 
+			"name": "_social", 
+			"type": "string" },
 			{
 				"internalType": "string",
 				"name": "_desc",
