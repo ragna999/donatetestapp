@@ -116,26 +116,22 @@ export default function CampaignDetailPage() {
   const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
+    if (!id || !ethers.isAddress(id)) return;
+  
     const fetchData = async () => {
       try {
-        const provider = new ethers.JsonRpcProvider(
-          'https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'
-        );
-
+        const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
+  
         const bytecode = await provider.getCode(id);
-        if (bytecode === '0x') throw new Error('Invalid contract address');
-
-        const contract = new Contract('0x6C4403ACDDb17E46a6157bF705A3E4682A4DC13D', CAMPAIGN_ABI, provider);
-        
-        try {
-          const title = await contract.title();
-          console.log('✅ Title:', title);
-        } catch (err) {
-          console.error('❌ Gagal ambil title:', err);
-        }
-        
+        if (bytecode === '0x') throw new Error('❌ Address bukan contract');
+  
+        const contract = new ethers.Contract(id, CAMPAIGN_ABI, provider);
+  
+        const title = await contract.title(); // test 1 field dulu
+        console.log("✅ title berhasil:", title);
+  
+        // Lanjut ambil field lain setelah sukses
         const [
-          title,
           description,
           image,
           goal,
@@ -146,7 +142,6 @@ export default function CampaignDetailPage() {
           donationsRaw,
           social
         ] = await Promise.all([
-          contract.title(),
           contract.description(),
           contract.image(),
           contract.goal(),
@@ -157,14 +152,12 @@ export default function CampaignDetailPage() {
           contract.getDonations(),
           contract.social()
         ]);
-
-        const donations = Array.isArray(donationsRaw)
-          ? donationsRaw.map((d: any) => ({
-              donor: d.donor,
-              amount: ethers.formatEther(d.amount),
-            }))
-          : [];
-
+  
+        const donations = donationsRaw.map((d: any) => ({
+          donor: d.donor,
+          amount: ethers.formatEther(d.amount)
+        }));
+  
         setData({
           title,
           description,
@@ -175,38 +168,18 @@ export default function CampaignDetailPage() {
           location,
           deadline: Number(deadline),
           social,
-          donations,
+          donations
         });
-
+  
         setReady(true);
-
-        const commentsKey = `commentsHash_${id}`;
-        const hash = localStorage.getItem(commentsKey);
-        if (hash) {
-          try {
-            const result = await fetchCommentsFromIPFS(hash);
-            setComments(result);
-          } catch (err) {
-            console.warn('❌ Gagal load komentar:', err);
-          }
-        }
-
-        if (typeof window !== 'undefined' && window.ethereum) {
-          const browserProvider = new ethers.BrowserProvider(window.ethereum);
-          const signer = await browserProvider.getSigner();
-          const signerAddress = await signer.getAddress();
-          setCurrentAccount(signerAddress);
-          if (signerAddress.toLowerCase() === creator.toLowerCase()) {
-            setIsOwner(true);
-          }
-        }
       } catch (err) {
         console.error('❌ Error fetching campaign detail:', err);
       }
     };
-
+  
     fetchData();
-  }, []);
+  }, [id]);
+  
 
   useEffect(() => {
     if (!data?.deadline) return;
