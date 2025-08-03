@@ -200,112 +200,118 @@ async function fetchCommentsFromIPFS(hash: string) {
 //end comment 
 
 
-  if (!ready) return <p className="p-6 text-white">Loading campaign...</p>;
+if (!ready || !data) return <p className="p-6 text-white">Loading campaign...</p>;
 
-  return (
-    <div className="min-h-screen bg-gray-900 text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
-      {data.image ? (
-  <img
-    src={data.image}
-    alt={data.title}
-    className="w-full h-64 object-cover rounded-lg shadow mb-6"
-  />
-) : (
-  <img
-    src="https://placehold.co/600x300?text=Campaign"
-    alt="default"
-    className="w-full h-64 object-cover rounded-lg shadow mb-6"
-  />
-)}
+return (
+  <div className="min-h-screen bg-gray-900 text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
+    {data?.image ? (
+      <img
+        src={data.image}
+        alt={data.title || 'Campaign'}
+        className="w-full h-64 object-cover rounded-lg shadow mb-6"
+      />
+    ) : (
+      <img
+        src="https://placehold.co/600x300?text=Campaign"
+        alt="default"
+        className="w-full h-64 object-cover rounded-lg shadow mb-6"
+      />
+    )}
 
+    <h1 className="text-2xl font-bold mb-2">{data?.title || 'Tanpa Judul'}</h1>
+    <p className="mb-4 text-gray-300">{data?.description || 'Tidak ada deskripsi.'}</p>
 
-      <h1 className="text-2xl font-bold mb-2">{data.title}</h1>
-      <p className="mb-4 text-gray-300">{data.description}</p>
-
-<p className="text-sm text-gray-400 mb-1">📍 Lokasi: {data.location}</p>
-<p className="text-sm text-gray-400 mb-1">
-  ⏳ Berakhir pada: {new Date(data.deadline * 1000).toLocaleString()}
-</p>
-{data.social && (
-  <p className="text-sm text-blue-400 mb-6">
-    🔗 Sosmed:{' '}
-    <a href={data.social} target="_blank" rel="noopener noreferrer" className="underline">
-      {data.social}
-    </a>
-  </p>
-)}
-
-
-      <div className="mb-6">
-        <p className="text-sm font-medium text-gray-400 mb-1">
-          {data.raised} STT dari {data.goal} STT
-        </p>
-        <div className="w-full bg-gray-700 h-3 rounded-full overflow-hidden">
-          <div
-            className="bg-gradient-to-r from-green-400 to-lime-400 h-full transition-all"
-            style={{ width: `${(Number(data.raised) / Number(data.goal)) * 100}%` }}
-          />
-        </div>
-      </div>
-
-      <p className="text-sm text-purple-300 mb-6">
-        👤 Diselenggarakan oleh:{' '}
-        <a href={`/profile/${data.creator}`} className="hover:underline break-all font-mono text-blue-400">
-          {data.creator}
+    {data?.location && (
+      <p className="text-sm text-gray-400 mb-1">📍 Lokasi: {data.location}</p>
+    )}
+    {data?.deadline && (
+      <p className="text-sm text-gray-400 mb-1">
+        ⏳ Berakhir pada: {new Date(data.deadline * 1000).toLocaleString()}
+      </p>
+    )}
+    {data?.social && (
+      <p className="text-sm text-blue-400 mb-6">
+        🔗 Sosmed:{' '}
+        <a href={data.social} target="_blank" rel="noopener noreferrer" className="underline">
+          {data.social}
         </a>
       </p>
+    )}
 
-      <p className="text-xs text-gray-500 mb-8 break-all font-mono">
-        Address: <span className="text-blue-500">{id}</span>
+    <div className="mb-6">
+      <p className="text-sm font-medium text-gray-400 mb-1">
+        {data.raised} STT dari {data.goal} STT
       </p>
-
-      {currentAccount && (
-        <form onSubmit={handleDonate} className="mb-10">
-          <label className="block text-sm font-medium mb-2 text-gray-300">
-            Jumlah Donasi (STT)
-          </label>
-          <input
-            type="number"
-            step="any"
-            value={donationAmount}
-            onChange={(e) => setDonationAmount(e.target.value)}
-            className="w-full px-4 py-3 rounded-md bg-gray-800 border border-gray-700 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Contoh: 0.01"
-          />
-          <button
-            type="submit"
-            className="mt-4 w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-md hover:from-blue-500 hover:to-indigo-500 transition-all duration-200"
-          >
-            🚀 Donasi Sekarang
-          </button>
-        </form>
-      )}
-
-      {isOwner && (
-        <button
-          onClick={handleWithdraw}
-          className="mb-10 w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-md hover:opacity-90 transition"
-        >
-          💸 Tarik Dana
-        </button>
-      )}
-
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Riwayat Donasi</h2>
-        <ul className="space-y-2">
-          {data.donations.map((d: any, i: number) => (
-            <li
-              key={i}
-              className="flex justify-between bg-gray-800 p-3 rounded-lg border border-gray-700 text-sm"
-            >
-              <span className="font-mono text-gray-300">
-                {d.donor.slice(0, 6)}...{d.donor.slice(-4)}
-              </span>
-              <span className="text-lime-400 font-semibold">{d.amount} STT</span>
-            </li>
-          ))}
-        </ul>
+      <div className="w-full bg-gray-700 h-3 rounded-full overflow-hidden">
+        <div
+          className="bg-gradient-to-r from-green-400 to-lime-400 h-full transition-all"
+          style={{
+            width: `${(Number(data.raised) / Number(data.goal)) * 100}%`
+          }}
+        />
       </div>
+    </div>
+
+    <p className="text-sm text-purple-300 mb-6">
+      👤 Diselenggarakan oleh:{' '}
+      <a
+        href={`/profile/${data.creator}`}
+        className="hover:underline break-all font-mono text-blue-400"
+      >
+        {data.creator}
+      </a>
+    </p>
+
+    <p className="text-xs text-gray-500 mb-8 break-all font-mono">
+      Address: <span className="text-blue-500">{id}</span>
+    </p>
+
+    {currentAccount && (
+      <form onSubmit={handleDonate} className="mb-10">
+        <label className="block text-sm font-medium mb-2 text-gray-300">Jumlah Donasi (STT)</label>
+        <input
+          type="number"
+          step="any"
+          value={donationAmount}
+          onChange={(e) => setDonationAmount(e.target.value)}
+          className="w-full px-4 py-3 rounded-md bg-gray-800 border border-gray-700 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Contoh: 0.01"
+        />
+        <button
+          type="submit"
+          className="mt-4 w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-md hover:from-blue-500 hover:to-indigo-500 transition-all duration-200"
+        >
+          🚀 Donasi Sekarang
+        </button>
+      </form>
+    )}
+
+    {isOwner && (
+      <button
+        onClick={handleWithdraw}
+        className="mb-10 w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-md hover:opacity-90 transition"
+      >
+        💸 Tarik Dana
+      </button>
+    )}
+
+    <div>
+      <h2 className="text-lg font-semibold mb-4">Riwayat Donasi</h2>
+      <ul className="space-y-2">
+        {data?.donations?.map((d: any, i: number) => (
+          <li
+            key={i}
+            className="flex justify-between bg-gray-800 p-3 rounded-lg border border-gray-700 text-sm"
+          >
+            <span className="font-mono text-gray-300">
+              {d.donor.slice(0, 6)}...{d.donor.slice(-4)}
+            </span>
+            <span className="text-lime-400 font-semibold">{d.amount} STT</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+
       
       <div className="mt-12">
   <h2 className="text-lg font-semibold mb-4">💬 Komentar</h2>
