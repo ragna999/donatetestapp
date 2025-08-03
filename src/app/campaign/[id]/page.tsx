@@ -48,7 +48,9 @@ const CampaignDetailPage = () => {
       }
 
       try {
-        const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_RPC_URL); // pakai .env
+        const provider = new ethers.JsonRpcProvider(
+          'https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'
+        );
         const contract = new Contract(id, CAMPAIGN_ABI, provider);
 
         const [
