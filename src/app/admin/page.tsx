@@ -103,50 +103,62 @@ export default function AdminDashboard() {
     }
   };
 
+  useEffect(() => {
+	const ensureWalletConnected = async () => {
+	  const eth = (window as any).ethereum;
+	  if (!eth) return;
+  
+	  const accounts = await eth.request({ method: 'eth_accounts' });
+	  if (!accounts || accounts.length === 0) {
+		await eth.request({ method: 'eth_requestAccounts' });
+	  }
+	};
+  
+	ensureWalletConnected();
+  }, []);
+  
+  
   const handleApprove = async (address: string) => {
-    try {
-      const eth = (window as any).ethereum;
-      if (!eth) return alert('❌ Wallet tidak ditemukan');
-
-      const accounts = await eth.request({ method: 'eth_accounts' });
-      if (!accounts || accounts.length === 0) {
-        await eth.request({ method: 'eth_requestAccounts' });
-      }
-
-      const provider = new ethers.BrowserProvider(eth);
-      const signer = await provider.getSigner();
-      const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
-
-      const tx = await factory.approveCampaign(address);
-      await tx.wait();
-
-      alert('✅ Campaign berhasil di-approve!');
-      fetchPendingCampaigns();
-    } catch (err: any) {
-      console.error('❌ Gagal approve:', err);
-      alert('❌ Gagal approve campaign: ' + (err.message || err));
-    }
+	try {
+	  const eth = (window as any).ethereum;
+	  if (!eth) return alert('❌ Wallet tidak ditemukan');
+  
+	  const provider = new ethers.BrowserProvider(eth);
+	  const signer = await provider.getSigner();
+	  const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
+  
+	  const tx = await factory.approveCampaign(address);
+	  await tx.wait();
+  
+	  alert('✅ Campaign berhasil di-approve!');
+	  fetchPendingCampaigns();
+	} catch (err: any) {
+	  console.error('❌ Gagal approve:', err);
+	  alert('❌ Gagal approve campaign: ' + (err.message || err));
+	}
   };
+  
 
   const handleDeny = async (address: string) => {
-    try {
-      const eth = (window as any).ethereum;
-      if (!eth) return alert('❌ Wallet tidak ditemukan');
-
-      const provider = new ethers.BrowserProvider(eth);
-      const signer = await provider.getSigner();
-      const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
-
-      const tx = await factory.denyCampaign(address);
-      await tx.wait();
-
-      alert('⛔ Campaign berhasil ditolak!');
-      fetchPendingCampaigns();
-    } catch (err: any) {
-      console.error('❌ Gagal deny:', err);
-      alert('❌ Gagal menolak campaign: ' + (err.message || err));
-    }
+	try {
+	  const eth = (window as any).ethereum;
+	  if (!eth) return alert('❌ Wallet tidak ditemukan');
+  
+	  const provider = new ethers.BrowserProvider(eth);
+	  const signer = await provider.getSigner();
+	  const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
+  
+	  const tx = await factory.denyCampaign(address);
+	  await tx.wait();
+  
+	  alert('⛔ Campaign berhasil ditolak!');
+	  fetchPendingCampaigns();
+	} catch (err: any) {
+	  console.error('❌ Gagal deny:', err);
+	  alert('❌ Gagal menolak campaign: ' + (err.message || err));
+	}
   };
+  
 
   useEffect(() => {
     if (authenticated) fetchPendingCampaigns();

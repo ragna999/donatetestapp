@@ -16,17 +16,18 @@ type CampaignData = {
 };
 
 
-const FACTORY_ADDRESS = '0x3e1F1004f267c47D17486AAaceA432311A662c83';
+const FACTORY_ADDRESS = '0x331ad80aEAE0add547e9adC9Bd702215C6433Fe9';
 
 const FACTORY_ABI = [
   {
-    inputs: [],
-    name: 'getCampaigns',
-    outputs: [{ internalType: 'address[]', name: '', type: 'address[]' }],
-    stateMutability: 'view',
+    name: 'getApprovedCampaigns',
     type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address[]', name: '' }],
   },
 ];
+
 
 const CAMPAIGN_ABI = [
   { name: 'title', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
@@ -53,7 +54,8 @@ export default function HomePage() {
           'https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'
         );
         const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
-        const addresses: string[] = await factory.getCampaigns();
+        const addresses: string[] = await factory.getApprovedCampaigns();
+
 
         const results = await Promise.all(
           addresses.map(async (addr) => {
