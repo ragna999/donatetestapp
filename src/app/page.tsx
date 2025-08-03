@@ -11,9 +11,12 @@ type CampaignData = {
   image: string;
   goal: string;
   raised: string;
+  deadline: number;
+  isFinished: boolean;
 };
 
-const FACTORY_ADDRESS = '0xbdc6284b97146954ed8938a627de9dec42f65e60';
+
+const FACTORY_ADDRESS = '0x3e1F1004f267c47D17486AAaceA432311A662c83';
 
 const FACTORY_ABI = [
   {
@@ -31,6 +34,8 @@ const CAMPAIGN_ABI = [
   { name: 'image', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
   { name: 'goal', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
   { name: 'totalDonated', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+  { name: 'deadline', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+
 ];
 
 export default function HomePage() {
@@ -53,14 +58,18 @@ export default function HomePage() {
         const results = await Promise.all(
           addresses.map(async (addr) => {
             const c = new Contract(addr, CAMPAIGN_ABI, provider);
-            const [title, description, image, goal, raised] = await Promise.all([
+            const [title, description, image, goal, raised, deadline] = await Promise.all([
               c.title(),
               c.description(),
               c.image(),
               c.goal(),
               c.totalDonated(),
+              c.deadline(),
             ]);
-
+        
+            const now = Math.floor(Date.now() / 1000);
+            const isFinished = now > Number(deadline) || BigInt(raised) >= BigInt(goal);
+        
             return {
               address: addr,
               title,
@@ -68,11 +77,19 @@ export default function HomePage() {
               image,
               goal: ethers.formatEther(goal),
               raised: ethers.formatEther(raised),
+              deadline: Number(deadline),
+              isFinished,
             };
           })
         );
-
+        
+        // ❌ FILTER kalau kamu mau hanya campaign aktif:
+        // const active = results.filter((c) => !c.isFinished);
+        // setCampaigns(active);
+        
+        // ✅ ATAU tampilkan semua dengan badge:
         setCampaigns(results);
+        
       } catch (error) {
         console.error('❌ Gagal ambil data campaign:', error);
       }
@@ -134,6 +151,13 @@ export default function HomePage() {
               <p className="text-xs text-gray-500 mb-4 truncate font-mono">🧾 {c.address}</p>
 
               <Link href={`/campaign/${c.address}`}>
+
+              {c.isFinished && (
+            <span className="inline-block mb-2 text-xs px-2 py-1 rounded-full bg-gray-700 text-red-400 border border-red-500 font-mono">
+             ⛔ SELESAI
+            </span>
+              )}
+
                 <button className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white py-2 rounded-xl text-sm hover:scale-[1.03] transition-all font-semibold">
                   Lihat Detail
                 </button>
