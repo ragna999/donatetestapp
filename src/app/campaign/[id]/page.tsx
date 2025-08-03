@@ -4,7 +4,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ethers, Contract } from 'ethers';
-import { usePrivy } from '@privy-io/react-auth';
 
 const CAMPAIGN_ABI = 
 	[
@@ -206,7 +205,6 @@ const CAMPAIGN_ABI =
 	]
 
 export default function CampaignDetailPage() {
-  const { user, authenticated } = usePrivy();
   const params = useParams();
   const id = params?.id as string;
 
@@ -221,9 +219,6 @@ export default function CampaignDetailPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!authenticated || !user) return;
-      if (!id || !ethers.isAddress(id)) return;
-
       try {
         const provider = new ethers.JsonRpcProvider(
           'https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'
@@ -306,7 +301,7 @@ export default function CampaignDetailPage() {
     };
 
     fetchData();
-  }, [id, authenticated, user]);
+  }, []);
 
   useEffect(() => {
     if (!data?.deadline) return;
