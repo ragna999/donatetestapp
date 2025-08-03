@@ -258,15 +258,16 @@ export default function CreateCampaignPage() {
       const goalInWei = ethers.parseEther(goal);
       const durationInSeconds = parseInt(duration) * 86400;
   
-      const tx = await factory.createCampaign(
+	  const tx = await factory.createCampaign(
 		title,
-		social,         // ✅ di posisi ke-2
 		desc,
 		imageUrl || '',
 		goalInWei,
 		location,
-		durationInSeconds
+		durationInSeconds,
+		social  // ✅ social di akhir, sesuai ABI
 	  );
+	  
 	  
 	  
   
