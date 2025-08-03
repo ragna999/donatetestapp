@@ -28,8 +28,9 @@ const CAMPAIGN_ABI = [
     ],
   },
   { name: 'location', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
-{ name: 'deadline', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+  { name: 'deadline', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
   { name: 'donate', type: 'function', stateMutability: 'payable', inputs: [], outputs: [] },
+  { name: 'social', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
   { name: 'withdraw', type: 'function', stateMutability: 'nonpayable', inputs: [], outputs: [] },
 ];
 
@@ -67,7 +68,8 @@ export default function CampaignDetailPage() {
           creator,
           location,
           deadline,
-          donationsRaw
+          donationsRaw,
+          social
         ] = await Promise.all([
           contract.title(),
           contract.description(),
@@ -78,11 +80,10 @@ export default function CampaignDetailPage() {
           contract.location(),
           contract.deadline(),
           contract.getDonations(),
+          contract.social(), // ✅ ambil dari smart contract
         ]);
+        
   
-        const social = user?.twitter?.username
-          ? `https://twitter.com/${user.twitter.username}`
-          : '';
   
         const donations = Array.isArray(donationsRaw)
           ? donationsRaw.map((d: any) => ({

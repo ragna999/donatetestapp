@@ -209,7 +209,7 @@ export default function CreateCampaignPage() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
-
+  const [social, setSocial] = useState('');
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -243,18 +243,20 @@ export default function CreateCampaignPage() {
       const provider = new ethers.BrowserProvider(eth);
       const signer = await provider.getSigner();
       const factory = new ethers.Contract(FACTORY_ADDRESS, CAMPAIGN_ABI, signer);
-  
+
       const goalInWei = ethers.parseEther(goal);
       const durationInSeconds = parseInt(duration) * 86400;
   
       const tx = await factory.createCampaign(
-        title,
-        desc,
-        imageUrl || '',
-        goalInWei,
-        location,
-        durationInSeconds
-      );
+		title,
+		desc,
+		imageUrl || '',
+		goalInWei,
+		location,
+		durationInSeconds,
+		social // ✅ Tambahkan di akhir
+	  );
+	  
   
       await tx.wait();
       alert('✅ Kampanye berhasil dibuat!');
@@ -273,29 +275,38 @@ export default function CreateCampaignPage() {
       <h1 className="text-2xl font-bold mb-6 text-center">🚀 Buat Kampanye Donasi</h1>
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Title */}
-        <Input label="Judul Kampanye" value={title} onChange={setTitle} loading={loading} />
-        {/* Description */}
-        <TextArea label="Deskripsi" value={desc} onChange={setDesc} loading={loading} />
-        {/* Target */}
-        <Input label="Target Dana (STT)" value={goal} onChange={setGoal} loading={loading} type="number" />
-        {/* Lokasi */}
-        <Input label="Lokasi Penerima/Bencana" value={location} onChange={setLocation} loading={loading} />
-        {/* Durasi */}
-        <Input label="Durasi Kampanye (hari)" value={duration} onChange={setDuration} loading={loading} type="number" />
-        {/* Gambar */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Upload Gambar</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            disabled={uploading || loading}
-            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4
-              file:rounded file:border-0 file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-          />
-          {uploading && <p className="text-sm text-blue-400 mt-2">Uploading to IPFS...</p>}
-          {imageUrl && <img src={imageUrl} alt="Preview" className="mt-4 rounded-md w-full h-56 object-cover border" />}
-        </div>
+<Input label="Judul Kampanye" value={title} onChange={setTitle} loading={loading} />
+
+{/* Description */}
+<TextArea label="Deskripsi" value={desc} onChange={setDesc} loading={loading} />
+
+{/* Target */}
+<Input label="Target Dana (STT)" value={goal} onChange={setGoal} loading={loading} type="number" />
+
+{/* Lokasi */}
+<Input label="Lokasi Penerima/Bencana" value={location} onChange={setLocation} loading={loading} />
+
+{/* Durasi */}
+<Input label="Durasi Kampanye (hari)" value={duration} onChange={setDuration} loading={loading} type="number" />
+
+{/* Sosial Media */}
+<Input label="Link Sosial Media (Twitter/Linktree)" value={social} onChange={setSocial} loading={loading} />
+
+{/* Gambar */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">Upload Gambar</label>
+  <input
+    type="file"
+    accept="image/*"
+    onChange={handleImageUpload}
+    disabled={uploading || loading}
+    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4
+      file:rounded file:border-0 file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+  />
+  {uploading && <p className="text-sm text-blue-400 mt-2">Uploading to IPFS...</p>}
+  {imageUrl && <img src={imageUrl} alt="Preview" className="mt-4 rounded-md w-full h-56 object-cover border" />}
+</div>
+
         {/* Submit */}
         <button
           type="submit"
