@@ -200,6 +200,30 @@ async function fetchCommentsFromIPFS(hash: string) {
 
 //end comment 
 
+const [timeLeft, setTimeLeft] = useState('');
+
+useEffect(() => {
+  if (!data?.deadline) return;
+
+  const interval = setInterval(() => {
+    const now = Date.now();
+    const diff = data.deadline * 1000 - now;
+
+    if (diff <= 0) {
+      setTimeLeft('⏱️ Campaign telah selesai');
+      clearInterval(interval);
+    } else {
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+
+      setTimeLeft(`${days}h ${hours}j ${minutes}m ${seconds}s`);
+    }
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, [data?.deadline]);
 
 if (!ready || !data) return <p className="p-6 text-white">Loading campaign...</p>;
 
@@ -226,10 +250,9 @@ return (
       <p className="text-sm text-gray-400 mb-1">📍 Lokasi: {data.location}</p>
     )}
     {data?.deadline && (
-      <p className="text-sm text-gray-400 mb-1">
-        ⏳ Berakhir pada: {new Date(data.deadline * 1000).toLocaleString()}
-      </p>
+  <p className="text-sm text-yellow-300 mb-1">⏳ Waktu tersisa: {timeLeft}</p>
     )}
+
     {data?.social && (
       <p className="text-sm text-blue-400 mb-6">
         🔗 Sosmed:{' '}
