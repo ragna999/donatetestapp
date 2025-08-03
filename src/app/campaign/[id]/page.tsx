@@ -185,26 +185,81 @@ export default function CampaignDetailPage() {
   
 
   useEffect(() => {
-    if (!data?.deadline) return;
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const diff = data.deadline * 1000 - now;
-
-      if (diff <= 0) {
-        setTimeLeft('⏱️ Campaign telah selesai');
-        clearInterval(interval);
-      } else {
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-        const minutes = Math.floor((diff / (1000 * 60)) % 60);
-        const seconds = Math.floor((diff / 1000) % 60);
-        setTimeLeft(`${days}h ${hours}j ${minutes}m ${seconds}s`);
+    if (!id || !ethers.isAddress(id)) {
+      console.warn('⚠️ ID belum valid:', id);
+      return;
+    }
+  
+    const fetchData = async () => {
+      console.log('🔄 Mulai fetch campaign data...');
+  
+      try {
+        const provider = new ethers.JsonRpcProvider(
+          'https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'
+        );
+  
+        const bytecode = await provider.getCode(id);
+        console.log('📦 Bytecode:', bytecode);
+  
+        if (bytecode === '0x') throw new Error('❌ Ini bukan smart contract (EOA)');
+  
+        const contract = new Contract(id, CAMPAIGN_ABI, provider);
+  
+        console.log('🧠 Available functions:', Object.keys(contract.functions));
+  
+        const title = await contract.title();
+        console.log('✅ title:', title);
+  
+        const [
+          description,
+          image,
+          goal,
+          totalDonated,
+          creator,
+          location,
+          deadline,
+          donationsRaw,
+          social
+        ] = await Promise.all([
+          contract.description(),
+          contract.image(),
+          contract.goal(),
+          contract.totalDonated(),
+          contract.creator(),
+          contract.location(),
+          contract.deadline(),
+          contract.getDonations(),
+          contract.social()
+        ]);
+  
+        const donations = donationsRaw.map((d: any) => ({
+          donor: d.donor,
+          amount: ethers.formatEther(d.amount),
+        }));
+  
+        setData({
+          title,
+          description,
+          image,
+          goal: ethers.formatEther(goal),
+          raised: ethers.formatEther(totalDonated),
+          creator,
+          location,
+          deadline: Number(deadline),
+          social,
+          donations,
+        });
+  
+        console.log('✅ Data berhasil di-fetch, setting ready...');
+        setReady(true);
+      } catch (err) {
+        console.error('❌ Error fetching campaign detail:', err);
       }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [data?.deadline]);
+    };
+  
+    fetchData();
+  }, [id]);
+  
 
   const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT!;
 
