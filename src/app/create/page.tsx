@@ -242,7 +242,13 @@ export default function CreateCampaignPage() {
       if (!accounts || accounts.length === 0) {
         await eth.request({ method: 'eth_requestAccounts' });
       }
-  
+	  
+	  if (!social || !social.startsWith('http')) {
+		alert('❌ Masukkan link sosial media yang valid!');
+		setLoading(false);
+		return;
+	  }
+	  
       const provider = new ethers.BrowserProvider(eth);
       const signer = await provider.getSigner();
       const factory = new ethers.Contract(FACTORY_ADDRESS, CAMPAIGN_ABI, signer);
@@ -252,13 +258,14 @@ export default function CreateCampaignPage() {
   
       const tx = await factory.createCampaign(
 		title,
+		social,         // ✅ di posisi ke-2
 		desc,
 		imageUrl || '',
 		goalInWei,
 		location,
-		durationInSeconds,
-		social // ✅ Tambahkan di akhir
+		durationInSeconds
 	  );
+	  
 	  
   
       await tx.wait();
