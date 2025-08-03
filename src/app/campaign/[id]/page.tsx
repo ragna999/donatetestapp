@@ -37,7 +37,8 @@ const CAMPAIGN_ABI = [
 
 
 export default function CampaignDetailPage() {
-  const { user } = usePrivy();
+  const { user,authenticated } = usePrivy();
+
   const params = useParams();
   const id = params?.id as string;
 
@@ -51,11 +52,14 @@ export default function CampaignDetailPage() {
   
   useEffect(() => {
     const fetchData = async () => {
+      if (!ready || !authenticated || !user) return; // ⛔ tunggu dulu sampai user valid
+  
       try {
         if (!id || !ethers.isAddress(id)) return;
+  
         const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
         const contract = new Contract(id, CAMPAIGN_ABI, provider);
-
+  
         const [
           title,
           description,
@@ -77,53 +81,47 @@ export default function CampaignDetailPage() {
           contract.deadline(),
           contract.getDonations(),
         ]);
-        
-     
-        let social = '';
-if (user && user.twitter && typeof user.twitter === 'object' && 'username' in user.twitter) {
-  social = `https://twitter.com/${(user.twitter as any).username}`;
-}
-console.log('👤 user dari Privy:', user);
-
-
+  
+        const social = user?.twitter?.username
+          ? `https://twitter.com/${user.twitter.username}`
+          : '';
+  
         const donations = Array.isArray(donationsRaw)
           ? donationsRaw.map((d: any) => ({
               donor: d.donor,
               amount: ethers.formatEther(d.amount),
             }))
           : [];
-
-          setData({
-            title,
-            description,
-            image,
-            goal: ethers.formatEther(goal),
-            raised: ethers.formatEther(totalDonated),
-            creator,
-            location,
-            deadline: Number(deadline),
-            social,
-            donations,
-          });
-          
-
-
+  
+        setData({
+          title,
+          description,
+          image,
+          goal: ethers.formatEther(goal),
+          raised: ethers.formatEther(totalDonated),
+          creator,
+          location,
+          deadline: Number(deadline),
+          social,
+          donations,
+        });
+  
         setReady(true);
-
-
+  
+        // load komentar IPFS
         const commentsKey = `commentsHash_${id}`;
-const hash = localStorage.getItem(commentsKey);
-if (hash) {
-  try {
-    const result = await fetchCommentsFromIPFS(hash);
-    setComments(result);
-  } catch (err) {
-    console.warn('❌ Gagal load komentar:', err);
-  }
-}
-
-
-        if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
+        const hash = localStorage.getItem(commentsKey);
+        if (hash) {
+          try {
+            const result = await fetchCommentsFromIPFS(hash);
+            setComments(result);
+          } catch (err) {
+            console.warn('❌ Gagal load komentar:', err);
+          }
+        }
+  
+        // check isOwner
+        if (typeof window !== 'undefined' && window.ethereum) {
           try {
             const browserProvider = new ethers.BrowserProvider(window.ethereum);
             const signer = await browserProvider.getSigner();
@@ -134,13 +132,15 @@ if (hash) {
             }
           } catch {}
         }
+  
       } catch (err) {
         console.error('❌ Error fetching campaign detail:', err);
       }
     };
-
+  
     fetchData();
-  }, [id]);
+  }, [id, ready, authenticated, user]);
+  
 
   const handleDonate = async (e: React.FormEvent) => {
     e.preventDefault();
