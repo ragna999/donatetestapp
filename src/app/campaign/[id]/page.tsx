@@ -52,7 +52,7 @@ export default function CampaignDetailPage() {
       try {
         if (!id || !ethers.isAddress(id)) throw new Error('Invalid address');
 
-        const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/somnia_testnet/...');
+        const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
         const code = await provider.getCode(id);
         if (code === '0x') throw new Error('Address is not a contract');
 
