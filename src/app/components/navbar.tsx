@@ -14,7 +14,7 @@ export default function Navbar() {
     ? `${user.wallet.address.slice(0, 6)}...${user.wallet.address.slice(-4)}`
     : '';
 
-  const ADMIN_ADDRESS = '0xEe4B417051eEfB26A567408E9A8fB4ed4B57b449';
+  const ADMIN_ADDRESS = '0x77CD55E769E5Da91298c8007EB2D36Dc0656a31B';
   const ADMIN_ABI = [
     {
       "inputs": [],
