@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { ethers } from 'ethers';
 import { uploadToPinata } from '../utils/uploadToPinata';
 
-const FACTORY_ADDRESS = '0xEe4B417051eEfB26A567408E9A8fB4ed4B57b449';
+const FACTORY_ADDRESS = '0x331ad80aEAE0add547e9adC9Bd702215C6433Fe9';
 
 const CAMPAIGN_ABI = 
 	[

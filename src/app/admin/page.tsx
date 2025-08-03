@@ -5,7 +5,7 @@ import { ethers } from 'ethers';
 import { usePrivy } from '@privy-io/react-auth';
 import Link from 'next/link';
 
-const FACTORY_ADDRESS = '0xEe4B417051eEfB26A567408E9A8fB4ed4B57b449';
+const FACTORY_ADDRESS = '0x331ad80aEAE0add547e9adC9Bd702215C6433Fe9';
 
 const FACTORY_ABI = [
   {
