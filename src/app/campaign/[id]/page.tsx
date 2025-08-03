@@ -26,6 +26,10 @@ const CAMPAIGN_ABI = [
       },
     ],
   },
+  { name: 'location', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
+{ name: 'deadline', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+{ name: 'social', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
+
   { name: 'donate', type: 'function', stateMutability: 'payable', inputs: [], outputs: [] },
   { name: 'withdraw', type: 'function', stateMutability: 'nonpayable', inputs: [], outputs: [] },
 ];
@@ -50,15 +54,30 @@ export default function CampaignDetailPage() {
         const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
         const contract = new Contract(id, CAMPAIGN_ABI, provider);
 
-        const [title, description, image, goal, totalDonated, creator, donationsRaw] = await Promise.all([
-  contract.title(),
-  contract.description(),
-  contract.image(), // ✅ ambil image dari smart contract
-  contract.goal(),
-  contract.totalDonated(),
-  contract.creator(),
-  contract.getDonations(),
-]);
+        const [
+          title,
+          description,
+          image,
+          goal,
+          totalDonated,
+          creator,
+          location,
+          deadline,
+          social,
+          donationsRaw
+        ] = await Promise.all([
+          contract.title(),
+          contract.description(),
+          contract.image(),
+          contract.goal(),
+          contract.totalDonated(),
+          contract.creator(),
+          contract.location(),
+          contract.deadline(),
+          contract.social(),
+          contract.getDonations(),
+        ]);
+        
 
 
         const donations = Array.isArray(donationsRaw)
@@ -68,15 +87,19 @@ export default function CampaignDetailPage() {
             }))
           : [];
 
-        setData({
-  title,
-  description,
-  image, // ✅ simpan image
-  goal: ethers.formatEther(goal),
-  raised: ethers.formatEther(totalDonated),
-  creator,
-  donations,
-});
+          setData({
+            title,
+            description,
+            image,
+            goal: ethers.formatEther(goal),
+            raised: ethers.formatEther(totalDonated),
+            creator,
+            location,
+            deadline: Number(deadline),
+            social,
+            donations,
+          });
+          
 
 
         setReady(true);
@@ -196,6 +219,20 @@ async function fetchCommentsFromIPFS(hash: string) {
 
       <h1 className="text-2xl font-bold mb-2">{data.title}</h1>
       <p className="mb-4 text-gray-300">{data.description}</p>
+
+<p className="text-sm text-gray-400 mb-1">📍 Lokasi: {data.location}</p>
+<p className="text-sm text-gray-400 mb-1">
+  ⏳ Berakhir pada: {new Date(data.deadline * 1000).toLocaleString()}
+</p>
+{data.social && (
+  <p className="text-sm text-blue-400 mb-6">
+    🔗 Sosmed:{' '}
+    <a href={data.social} target="_blank" rel="noopener noreferrer" className="underline">
+      {data.social}
+    </a>
+  </p>
+)}
+
 
       <div className="mb-6">
         <p className="text-sm font-medium text-gray-400 mb-1">
