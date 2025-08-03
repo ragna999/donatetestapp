@@ -125,8 +125,15 @@ export default function CampaignDetailPage() {
         const bytecode = await provider.getCode(id);
         if (bytecode === '0x') throw new Error('Invalid contract address');
 
-        const contract = new Contract(id, CAMPAIGN_ABI, provider);
-
+        const contract = new Contract('0x6C4403ACDDb17E46a6157bF705A3E4682A4DC13D', CAMPAIGN_ABI, provider);
+        
+        try {
+          const title = await contract.title();
+          console.log('✅ Title:', title);
+        } catch (err) {
+          console.error('❌ Gagal ambil title:', err);
+        }
+        
         const [
           title,
           description,
