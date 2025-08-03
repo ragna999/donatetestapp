@@ -5,10 +5,29 @@ import { ethers } from 'ethers';
 import { usePrivy } from '@privy-io/react-auth';
 import Link from 'next/link';
 
-const FACTORY_ADDRESS = '0x3e1F1004f267c47D17486AAaceA432311A662c83';
-const FACTORY_ABI =[
+const FACTORY_ADDRESS = '0x67406856cdE16b43DEf56EaB3CD6A6c678537878';
+const FACTORY_ABI = [
 	{
-		"inputs": [],
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_campaign",
+				"type": "address"
+			}
+		],
+		"name": "approveCampaign",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_adminContract",
+				"type": "address"
+			}
+		],
 		"stateMutability": "nonpayable",
 		"type": "constructor"
 	},
@@ -18,11 +37,11 @@ const FACTORY_ABI =[
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "newAdmin",
+				"name": "campaignAddress",
 				"type": "address"
 			}
 		],
-		"name": "AdminAdded",
+		"name": "CampaignApproved",
 		"type": "event"
 	},
 	{
@@ -31,43 +50,87 @@ const FACTORY_ABI =[
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "removedAdmin",
-				"type": "address"
-			}
-		],
-		"name": "AdminRemoved",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "oldOwner",
+				"name": "campaignAddress",
 				"type": "address"
 			},
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "newOwner",
+				"name": "creator",
 				"type": "address"
 			}
 		],
-		"name": "OwnershipTransferred",
+		"name": "CampaignCreated",
 		"type": "event"
 	},
 	{
 		"inputs": [
 			{
+				"internalType": "string",
+				"name": "_title",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_desc",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_image",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_goal",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "_location",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_duration",
+				"type": "uint256"
+			}
+		],
+		"name": "createCampaign",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "adminContract",
+		"outputs": [
+			{
 				"internalType": "address",
-				"name": "newAdmin",
+				"name": "",
 				"type": "address"
 			}
 		],
-		"name": "addAdmin",
-		"outputs": [],
-		"stateMutability": "nonpayable",
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "campaigns",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -78,7 +141,52 @@ const FACTORY_ABI =[
 				"type": "address"
 			}
 		],
-		"name": "isAdmin",
+		"name": "campaignToCreator",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getAllCampaigns",
+		"outputs": [
+			{
+				"internalType": "address[]",
+				"name": "",
+				"type": "address[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getApprovedCampaigns",
+		"outputs": [
+			{
+				"internalType": "address[]",
+				"name": "result",
+				"type": "address[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "isApproved",
 		"outputs": [
 			{
 				"internalType": "bool",
@@ -88,49 +196,8 @@ const FACTORY_ABI =[
 		],
 		"stateMutability": "view",
 		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "owner",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "admin",
-				"type": "address"
-			}
-		],
-		"name": "removeAdmin",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "transferOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
 	}
 ]
-
-
 
 const CAMPAIGN_ABI = [
   { name: 'title', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
