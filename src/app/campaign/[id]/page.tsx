@@ -37,6 +37,7 @@ const CAMPAIGN_ABI = [
 
 
 export default function CampaignDetailPage() {
+  const { user } = usePrivy();
   const params = useParams();
   const id = params?.id as string;
 
@@ -77,7 +78,7 @@ export default function CampaignDetailPage() {
           contract.getDonations(),
         ]);
         
-        const { user } = usePrivy();
+     
         const social = user?.twitter?.username
   ? `https://twitter.com/${user.twitter.username}`
   : '';
