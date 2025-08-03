@@ -47,10 +47,11 @@ export default function CampaignDetailPage() {
   const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
-    if (!id || !ethers.isAddress(id)) return;
+    
 
     const fetchData = async () => {
       try {
+        if (!id || !ethers.isAddress(id)) return;
         console.log('🚀 Starting fetchData...');
         const provider = new ethers.JsonRpcProvider(
           'https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'
