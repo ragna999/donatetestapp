@@ -79,9 +79,12 @@ export default function CampaignDetailPage() {
         ]);
         
      
-        const social = user?.twitter?.username
-  ? `https://twitter.com/${user.twitter.username}`
-  : '';
+        let social = '';
+if (user && user.twitter && typeof user.twitter === 'object' && 'username' in user.twitter) {
+  social = `https://twitter.com/${(user.twitter as any).username}`;
+}
+console.log('👤 user dari Privy:', user);
+
 
         const donations = Array.isArray(donationsRaw)
           ? donationsRaw.map((d: any) => ({
