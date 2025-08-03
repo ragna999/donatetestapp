@@ -50,7 +50,7 @@ export default function CampaignDetailPage() {
   
   useEffect(() => {
     const fetchData = async () => {
-      if (!ready || !authenticated || !user) return; // ⛔ tunggu dulu sampai user valid
+      if (!authenticated || !user) return; // ✅ cukup cek ini aja bro
   
       try {
         if (!id || !ethers.isAddress(id)) return;
@@ -104,9 +104,8 @@ export default function CampaignDetailPage() {
           donations,
         });
   
-        setReady(true);
+        setReady(true); // ✅ ini baru bikin UI bisa render
   
-        // load komentar IPFS
         const commentsKey = `commentsHash_${id}`;
         const hash = localStorage.getItem(commentsKey);
         if (hash) {
@@ -118,7 +117,6 @@ export default function CampaignDetailPage() {
           }
         }
   
-        // check isOwner
         if (typeof window !== 'undefined' && window.ethereum) {
           try {
             const browserProvider = new ethers.BrowserProvider(window.ethereum);
@@ -130,14 +128,14 @@ export default function CampaignDetailPage() {
             }
           } catch {}
         }
-  
       } catch (err) {
         console.error('❌ Error fetching campaign detail:', err);
       }
     };
   
     fetchData();
-  }, [id, ready, authenticated, user]);
+  }, [id, authenticated, user]); // ✅ hapus `ready` dari dependency
+  
   
 
   const handleDonate = async (e: React.FormEvent) => {
