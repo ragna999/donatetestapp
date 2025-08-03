@@ -52,17 +52,31 @@ export default function CampaignDetailPage() {
 
     const fetchData = async () => {
       try {
+        console.log('🚀 Starting fetchData...');
         const provider = new ethers.JsonRpcProvider(
           'https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'
         );
-
+    
+        if (!id || !ethers.isAddress(id)) {
+          console.warn('❗ Invalid ID:', id);
+          return;
+        }
+    
         const bytecode = await provider.getCode(id);
-        if (bytecode === '0x') throw new Error('❌ Address bukan contract');
-
+        console.log('📦 Bytecode:', bytecode);
+    
+        if (bytecode === '0x') throw new Error('❌ Bukan smart contract');
+    
         const contract = new Contract(id, CAMPAIGN_ABI, provider);
-
+        console.log('🧠 Functions:', Object.keys(contract.functions));
+    
+        // panggil satu-satu dan log
         const title = await contract.title();
+        console.log('✅ title:', title);
+    
         const description = await contract.description();
+        console.log('✅ description:', description);
+    
         const image = await contract.image();
         const goal = await contract.goal();
         const totalDonated = await contract.totalDonated();
@@ -71,12 +85,12 @@ export default function CampaignDetailPage() {
         const deadline = await contract.deadline();
         const social = await contract.social();
         const donationsRaw = await contract.getDonations();
-
+    
         const donations = donationsRaw.map((d: any) => ({
           donor: d.donor,
           amount: ethers.formatEther(d.amount),
         }));
-
+    
         setData({
           title,
           description,
@@ -89,29 +103,15 @@ export default function CampaignDetailPage() {
           social,
           donations,
         });
-
+    
         setReady(true);
-
-        if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
-          const browserProvider = new ethers.BrowserProvider(window.ethereum);
-          const signer = await browserProvider.getSigner();
-          const signerAddress = await signer.getAddress();
-          setCurrentAccount(signerAddress);
-          if (signerAddress.toLowerCase() === creator.toLowerCase()) {
-            setIsOwner(true);
-          }
-        }
-
-        const commentsKey = `commentsHash_${id}`;
-        const hash = localStorage.getItem(commentsKey);
-        if (hash) {
-          const result = await fetchCommentsFromIPFS(hash);
-          setComments(result);
-        }
+        console.log('✅ Ready set to true');
+    
       } catch (err) {
-        console.error('❌ Error fetching campaign detail:', err);
+        console.error('❌ fetchData error:', err);
       }
     };
+    
 
     fetchData();
   }, [id]);
@@ -194,7 +194,11 @@ export default function CampaignDetailPage() {
     }
   }
 
-  if (!ready || !data) return <p className="p-6 text-white">Loading campaign...</p>;
+  if (!ready || !data) {
+    console.log('📛 Masih loading: ready =', ready, 'data =', data);
+    return <p className="p-6 text-white">Loading campaign...</p>;
+  }
+  
 
 return (
   <div className="min-h-screen bg-gray-900 text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
