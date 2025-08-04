@@ -37,9 +37,8 @@ const CAMPAIGN_ABI = [
 ];
 
 export default function CampaignHistoryPage() {
-    const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
-    const [loading, setLoading] = useState(true);
-    
+  const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,14 +49,15 @@ export default function CampaignHistoryPage() {
         );
         const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
         const addresses: string[] = await factory.getApprovedCampaigns();
-  
+        console.log("🔥 Approved campaign addresses:", addresses);
+
         const campaignsFinished: CampaignData[] = [];
-  
+
         for (const addr of addresses) {
           try {
             const code = await provider.getCode(addr);
             if (code === '0x') continue;
-  
+
             const c = new Contract(addr, CAMPAIGN_ABI, provider);
             const [title, description, image, goal, raised, deadline] = await Promise.all([
               c.title(),
@@ -67,10 +67,15 @@ export default function CampaignHistoryPage() {
               c.totalDonated(),
               c.deadline(),
             ]);
-  
+
             const now = Math.floor(Date.now() / 1000);
             const isFinished = now > Number(deadline) || BigInt(raised) >= BigInt(goal);
-  
+
+            console.log(`📍 ${addr}`);
+            console.log(`💰 ${ethers.formatEther(raised)} / ${ethers.formatEther(goal)}`);
+            console.log(`⏰ Sekarang: ${now}, deadline: ${Number(deadline)}`);
+            console.log(`✅ isFinished: ${isFinished}`);
+
             if (isFinished) {
               campaignsFinished.push({
                 address: addr,
@@ -84,21 +89,22 @@ export default function CampaignHistoryPage() {
               });
             }
           } catch (innerErr: any) {
-            console.warn('⚠️ Skip address karena error:', addr, innerErr?.message || innerErr);
+            console.warn('⚠️ Lewat campaign rusak:', addr, innerErr?.message || innerErr);
           }
         }
-  
+
         setCampaigns(campaignsFinished);
+        console.log("✅ Total finished:", campaignsFinished.length);
       } catch (err) {
         console.error('❌ Error utama fetch campaign:', err);
       } finally {
         setLoading(false);
       }
     };
-  
+
     fetchData();
   }, []);
-  
+
   return (
     <main className="min-h-screen bg-[#0f172a] text-white py-12 px-6">
       <h1 className="text-3xl font-bold mb-10 text-center font-mono">Riwayat Campaign ⛔</h1>
