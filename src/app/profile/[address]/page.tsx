@@ -31,6 +31,9 @@ const CAMPAIGN_ABI = [
   { name: 'image', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
   { name: 'goal', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
   { name: 'creator', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] },
+  { name: 'deadline', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+  { name: 'totalDonated', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+  
 ];
 
 
@@ -52,27 +55,33 @@ export default function OrganizerProfilePage() {
         const filtered = await Promise.all(
           allAddresses.map(async (addr) => {
             const c = new Contract(addr, CAMPAIGN_ABI, provider);
-            const [creator, title, description, image, goal, raised] = await Promise.all([
-  c.creator(),
-  c.title(),
-  c.description(),
-  c.image(), // ✅ ambil gambar
-  c.goal(),
-  c.totalDonated(),
-]);
+            const [creator, title, description, image, goal, raised, deadline] = await Promise.all([
+              c.creator(),
+              c.title(),
+              c.description(),
+              c.image(),
+              c.goal(),
+              c.totalDonated(),
+              c.deadline(),
+            ]);
+            
+            const now = Math.floor(Date.now() / 1000);
+            const isFinished = now > Number(deadline) || BigInt(raised) >= BigInt(goal);
+            
 
 
             if (creator.toLowerCase() !== address.toLowerCase()) return null;
 
             return {
-  address: addr,
-  title,
-  description,
-  image, // ✅ simpan
-  goal: ethers.formatEther(goal),
-  raised: ethers.formatEther(raised),
-};
-
+              address: addr,
+              title,
+              description,
+              image,
+              goal: ethers.formatEther(goal),
+              raised: ethers.formatEther(raised),
+              isFinished, // ⬅️ ini baru
+            };
+            
           })
         );
 
@@ -143,6 +152,13 @@ export default function OrganizerProfilePage() {
               </div>
 
               <Link href={`/campaign/${c.address}`}>
+
+              {c.isFinished && (
+  <span className="text-xs px-2 py-1 bg-red-700 text-white rounded-full block text-center mb-2">
+    ⛔ Campaign Selesai
+  </span>
+)}
+
                 <button className="w-full mt-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-md text-sm hover:from-blue-500 hover:to-indigo-500 transition">
                   Lihat Detail →
                 </button>
