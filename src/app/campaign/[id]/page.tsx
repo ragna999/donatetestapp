@@ -99,6 +99,25 @@ export default function CampaignDetailPage() {
           }
         }
 
+// FETCH withdrawal requests
+const withdrawals: any[] = [];
+let index = 0;
+while (true) {
+  try {
+    const req = await contract.requests(index);
+    withdrawals.push({
+      amount: ethers.formatEther(req.amount),
+      reason: req.reason,
+      timestamp: Number(req.timestamp),
+      status: Number(req.status), // 0 = Pending, 1 = Approved, 2 = Denied
+    });
+    index++;
+  } catch (err) {
+    break;
+  }
+}
+
+
         const hash = localStorage.getItem(`commentsHash_${id}`);
         if (hash) {
           const res = await fetch(`https://gateway.pinata.cloud/ipfs/${hash}`);
@@ -305,7 +324,42 @@ return (
         ))}
       </ul>
     </div>
+    <div className="mt-16">
+  <h2 className="text-lg font-semibold mb-4">📤 Permintaan Penarikan Dana</h2>
 
+
+
+  <ul className="space-y-3">
+    {data?.withdrawals?.length > 0 ? (
+      data.withdrawals.map((r: any, i: number) => (
+        <li
+          key={i}
+          className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-sm flex flex-col gap-1"
+        >
+          <div className="text-white font-semibold">
+            💸 {r.amount} STT — <span className="text-gray-400 italic">{r.reason}</span>
+          </div>
+          <div className="text-xs text-gray-400">
+            🕒 {new Date(r.timestamp * 1000).toLocaleString()}
+          </div>
+          <div>
+            {r.status === 0 && (
+              <span className="text-yellow-400 font-mono">🟡 Pending</span>
+            )}
+            {r.status === 1 && (
+              <span className="text-green-400 font-mono">✅ Approved</span>
+            )}
+            {r.status === 2 && (
+              <span className="text-red-400 font-mono">❌ Denied</span>
+            )}
+          </div>
+        </li>
+      ))
+    ) : (
+      <p className="text-sm text-gray-500">Belum ada permintaan withdrawal.</p>
+    )}
+  </ul>
+</div>
       
       <div className="mt-12">
   <h2 className="text-lg font-semibold mb-4">💬 Komentar</h2>
@@ -364,6 +418,7 @@ return (
     </div>
   )}
 </div>
+
 
 
     </div>
