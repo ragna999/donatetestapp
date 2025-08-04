@@ -16,34 +16,14 @@ const FACTORY_ABI = [
     outputs: [{ type: 'address[]', name: '' }],
   },
   {
-    name: 'isApproved',
+    name: 'campaignToCreator',
     type: 'function',
     stateMutability: 'view',
     inputs: [{ name: '', type: 'address' }],
-    outputs: [{ type: 'bool', name: '' }],
-  },
-  {
-    name: 'deniedCampaigns',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: '', type: 'address' }],
-    outputs: [{ type: 'bool', name: '' }],
-  },
-  {
-    name: 'approveCampaign',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [{ name: '_campaign', type: 'address' }],
-    outputs: [],
-  },
-  {
-    name: 'denyCampaign',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [{ name: '_campaign', type: 'address' }],
-    outputs: [],
+    outputs: [{ type: 'address', name: '' }],
   },
 ];
+
 
 const CAMPAIGN_ABI = [
   { name: 'title', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },

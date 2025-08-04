@@ -9,13 +9,21 @@ import Link from 'next/link';
 const FACTORY_ADDRESS = '0xFDa9BEB30b7497d416Cbcb866cF00AF525a710eE';
 const FACTORY_ABI = [
   {
-    inputs: [],
-    name: 'getCampaigns',
-    outputs: [{ internalType: 'address[]', name: '', type: 'address[]' }],
-    stateMutability: 'view',
+    name: 'getAllCampaigns',
     type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address[]', name: '' }],
+  },
+  {
+    name: 'campaignToCreator',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: '', type: 'address' }],
+    outputs: [{ type: 'address', name: '' }],
   },
 ];
+
 
 const CAMPAIGN_ABI = [
   { name: 'title', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
@@ -47,36 +55,38 @@ export default function ProfilePage() {
 
       const provider = new ethers.JsonRpcProvider('https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26');
       const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
-      const allAddresses: string[] = await factory.getCampaigns();
+const allAddresses: string[] = await factory.getAllCampaigns();
 
-      const filtered = await Promise.all(
-        allAddresses.map(async (addr) => {
-          try {
-            const c = new Contract(addr, CAMPAIGN_ABI, provider);
-            const [creator, title, description, image, goal, raised] = await Promise.all([
-              c.creator(),
-              c.title(),
-              c.description(),
-              c.image(),
-              c.goal(),
-              c.totalDonated(),
-            ]);
-            if (!user?.wallet?.address) return null;
-            if (creator.toLowerCase() !== user.wallet.address.toLowerCase()) return null;
+const filtered = await Promise.all(
+  allAddresses.map(async (addr) => {
+    try {
+      const creator = await factory.campaignToCreator(addr);
+      if (!user?.wallet?.address) return null;
+      if (creator.toLowerCase() !== user.wallet.address.toLowerCase()) return null;
 
-            return {
-              address: addr,
-              title,
-              description,
-              image,
-              goal: ethers.formatEther(goal),
-              raised: ethers.formatEther(raised),
-            };
-          } catch {
-            return null;
-          }
-        })
-      );
+      const c = new Contract(addr, CAMPAIGN_ABI, provider);
+      const [title, description, image, goal, raised] = await Promise.all([
+        c.title(),
+        c.description(),
+        c.image(),
+        c.goal(),
+        c.totalDonated(),
+      ]);
+
+      return {
+        address: addr,
+        title,
+        description,
+        image,
+        goal: ethers.formatEther(goal),
+        raised: ethers.formatEther(raised),
+      };
+    } catch {
+      return null;
+    }
+  })
+);
+
 
       setUserCampaigns(filtered.filter(Boolean));
       setLoadingCampaigns(false);
