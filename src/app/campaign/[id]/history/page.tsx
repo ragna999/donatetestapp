@@ -37,38 +37,42 @@ const CAMPAIGN_ABI = [
 ];
 
 export default function CampaignHistoryPage() {
-  const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
-  const [loading, setLoading] = useState(true);
+    const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
+    const [loading, setLoading] = useState(true);
+    
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
         const provider = new ethers.JsonRpcProvider(
           'https://rpc.ankr.com/somnia_testnet/a9c1def15252939dd98ef549abf0941a694ff1c1b5d13e5889004f556bd67a26'
         );
         const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
         const addresses: string[] = await factory.getApprovedCampaigns();
-
-        const results = await Promise.all(
-          addresses.map(async (addr) => {
-            try {
-              const code = await provider.getCode(addr);
-              if (code === '0x') throw new Error('Not a contract');
-
-              const c = new Contract(addr, CAMPAIGN_ABI, provider);
-              const [title, description, image, goal, raised, deadline] = await Promise.all([
-                c.title(),
-                c.description(),
-                c.image(),
-                c.goal(),
-                c.totalDonated(),
-                c.deadline(),
-              ]);
-
-              const now = Math.floor(Date.now() / 1000);
-              const isFinished = now > Number(deadline) || BigInt(raised) >= BigInt(goal);
-
-              return {
+  
+        const campaignsFinished: CampaignData[] = [];
+  
+        for (const addr of addresses) {
+          try {
+            const code = await provider.getCode(addr);
+            if (code === '0x') continue;
+  
+            const c = new Contract(addr, CAMPAIGN_ABI, provider);
+            const [title, description, image, goal, raised, deadline] = await Promise.all([
+              c.title(),
+              c.description(),
+              c.image(),
+              c.goal(),
+              c.totalDonated(),
+              c.deadline(),
+            ]);
+  
+            const now = Math.floor(Date.now() / 1000);
+            const isFinished = now > Number(deadline) || BigInt(raised) >= BigInt(goal);
+  
+            if (isFinished) {
+              campaignsFinished.push({
                 address: addr,
                 title,
                 description,
@@ -77,27 +81,24 @@ export default function CampaignHistoryPage() {
                 raised: ethers.formatEther(raised),
                 deadline: Number(deadline),
                 isFinished,
-              };
-            } catch (err: any) {
-              console.warn('⚠️ Lewatin address invalid:', addr, err.message);
-              return null;
+              });
             }
-          })
-        );
-
-        const cleaned = results.filter((c): c is CampaignData => c !== null);
-        const finished = cleaned.filter(c => c.isFinished);
-        setCampaigns(finished);
-      } catch (error) {
-        console.error('❌ fetchData error:', error);
+          } catch (innerErr: any) {
+            console.warn('⚠️ Skip address karena error:', addr, innerErr?.message || innerErr);
+          }
+        }
+  
+        setCampaigns(campaignsFinished);
+      } catch (err) {
+        console.error('❌ Error utama fetch campaign:', err);
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchData();
   }, []);
-
+  
   return (
     <main className="min-h-screen bg-[#0f172a] text-white py-12 px-6">
       <h1 className="text-3xl font-bold mb-10 text-center font-mono">Riwayat Campaign ⛔</h1>
