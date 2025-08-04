@@ -50,35 +50,48 @@ export default function CampaignHistoryPage() {
         const addresses: string[] = await factory.getApprovedCampaigns();
 
         const results = await Promise.all(
-          addresses.map(async (addr) => {
-            const c = new Contract(addr, CAMPAIGN_ABI, provider);
-            const [title, description, image, goal, raised, deadline] = await Promise.all([
-              c.title(),
-              c.description(),
-              c.image(),
-              c.goal(),
-              c.totalDonated(),
-              c.deadline(),
-            ]);
+            addresses.map(async (addr) => {
+              try {
+                const code = await provider.getCode(addr);
+                if (code === '0x') throw new Error('Not a contract');
+          
+                const c = new Contract(addr, CAMPAIGN_ABI, provider);
+                const [title, description, image, goal, raised, deadline] = await Promise.all([
+                  c.title(),
+                  c.description(),
+                  c.image(),
+                  c.goal(),
+                  c.totalDonated(),
+                  c.deadline(),
+                ]);
+          
+                const now = Math.floor(Date.now() / 1000);
+                const isFinished = now > Number(deadline) || BigInt(raised) >= BigInt(goal);
+          
+                return {
+                  address: addr,
+                  title,
+                  description,
+                  image,
+                  goal: ethers.formatEther(goal),
+                  raised: ethers.formatEther(raised),
+                  deadline: Number(deadline),
+                  isFinished,
+                };
+              } catch (err: any) {
+                console.warn('⚠️ Lewatin address invalid:', addr, err.message);
+                return null;
+              }
+            })
+          );
+          
+          const cleaned = results.filter((c): c is CampaignData => c !== null);
+          const finished = cleaned.filter(c => c.isFinished);
+          setCampaigns(finished);
+          
+          
 
-            const now = Math.floor(Date.now() / 1000);
-            const isFinished = now > Number(deadline) || BigInt(raised) >= BigInt(goal);
-
-            return {
-              address: addr,
-              title,
-              description,
-              image,
-              goal: ethers.formatEther(goal),
-              raised: ethers.formatEther(raised),
-              deadline: Number(deadline),
-              isFinished,
-            };
-          })
-        );
-
-        const finished = results.filter(c => c.isFinished);
-        setCampaigns(finished);
+          
       } catch (error) {
         console.error('❌ Gagal ambil campaign:', error);
       } finally {
