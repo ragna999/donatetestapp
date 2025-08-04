@@ -17,128 +17,13 @@ export default function Navbar() {
   const ADMIN_ADDRESS = '0x0F3338210B2ae25089F9b9984Ba017eB596f1F9E';
   const ADMIN_ABI = [
     {
-      "inputs": [],
-      "stateMutability": "nonpayable",
-      "type": "constructor"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "newAdmin",
-          "type": "address"
-        }
-      ],
-      "name": "AdminAdded",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "removedAdmin",
-          "type": "address"
-        }
-      ],
-      "name": "AdminRemoved",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "oldOwner",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "newOwner",
-          "type": "address"
-        }
-      ],
-      "name": "OwnershipTransferred",
-      "type": "event"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "newAdmin",
-          "type": "address"
-        }
-      ],
-      "name": "addAdmin",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "isAdmin",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "owner",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "admin",
-          "type": "address"
-        }
-      ],
-      "name": "removeAdmin",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "newOwner",
-          "type": "address"
-        }
-      ],
-      "name": "transferOwnership",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
+      name: 'isAdmin',
+      type: 'function',
+      stateMutability: 'view',
+      inputs: [{ name: '', type: 'address' }],
+      outputs: [{ name: '', type: 'bool' }]
     }
-  ]
-  
+  ];
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -163,9 +48,17 @@ export default function Navbar() {
   return (
     <nav className="bg-gradient-to-br from-white via-gray-100 to-gray-200 border-b border-gray-300 shadow-sm px-4 py-3">
       <div className="flex justify-between items-center max-w-7xl mx-auto">
-        <Link href="/" className="text-2xl font-extrabold text-blue-700 tracking-tight">
-          🌱Donatree
-        </Link>
+        <div className="flex items-center gap-6">
+          <Link href="/" className="text-2xl font-extrabold text-blue-700 tracking-tight">
+            🌱Donatree
+          </Link>
+          <Link
+            href="/campaign/history"
+            className="text-sm text-gray-700 hover:underline"
+          >
+            Riwayat
+          </Link>
+        </div>
 
         {/* Burger menu (mobile) */}
         <button onClick={() => setIsOpen(!isOpen)} className="sm:hidden focus:outline-none">
@@ -180,36 +73,29 @@ export default function Navbar() {
 
         {/* Desktop menu */}
         <div className="hidden sm:flex items-center gap-3">
-        {authenticated ? (
-  <>
-    <span className="bg-gray-200 text-xs text-gray-800 font-mono px-3 py-1 rounded-full border border-gray-400 shadow-inner">
-      {shortAddress}
-    </span>
-    {isAdmin ? (
-      <Link href="/admin" className="bg-green-600 text-white px-4 py-1.5 rounded-full text-sm shadow">
-        Dashboard
-      </Link>
-    ) : (
-      <Link href="/profile" className="bg-blue-500 text-white px-4 py-1.5 rounded-full text-sm shadow">
-        Profile
-      </Link>
-    )}
+          {authenticated ? (
+            <>
+              {isAdmin ? (
+                <Link href="/admin" className="bg-green-600 text-white px-4 py-1.5 rounded-full text-sm shadow">
+                  Dashboard
+                </Link>
+              ) : (
+                <Link href="/profile" className="bg-blue-500 text-white px-4 py-1.5 rounded-full text-sm shadow">
+                  Profile
+                </Link>
+              )}
 
-    <Link
-      href="/campaign/history"
-      className="text-sm text-gray-600 hover:text-blue-600 underline"
-    >
-      Riwayat
-    </Link>
+              <span className="bg-gray-200 text-xs text-gray-800 font-mono px-3 py-1 rounded-full border border-gray-400 shadow-inner">
+                {shortAddress}
+              </span>
 
-    <button
-      onClick={logout}
-      className="text-sm bg-white hover:bg-gray-100 border border-gray-400 text-gray-700 px-4 py-1.5 rounded-full"
-    >
-      Logout
-    </button>
-  </>
-
+              <button
+                onClick={logout}
+                className="text-sm bg-white hover:bg-gray-100 border border-gray-400 text-gray-700 px-4 py-1.5 rounded-full"
+              >
+                Logout
+              </button>
+            </>
           ) : (
             <button
               onClick={login}
@@ -225,35 +111,39 @@ export default function Navbar() {
       {isOpen && (
         <div className="sm:hidden mt-4 space-y-2">
           {authenticated ? (
-  <>
-    <p className="text-sm text-gray-700 font-mono px-2">{shortAddress}</p>
+            <>
+              <Link
+                href="/campaign/history"
+                className="block text-sm text-gray-700 px-4 py-2 hover:underline"
+              >
+                Riwayat
+              </Link>
 
-    {isAdmin ? (
-      <Link href="/admin" className="block bg-green-600 text-white px-4 py-2 rounded-full text-sm">
-        Dashboard
-      </Link>
-    ) : (
-      <Link href="/profile" className="block bg-blue-500 text-white px-4 py-2 rounded-full text-sm">
-        Profile
-      </Link>
-    )}
+              {isAdmin ? (
+                <Link
+                  href="/admin"
+                  className="block bg-green-600 text-white px-4 py-2 rounded-full text-sm"
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <Link
+                  href="/profile"
+                  className="block bg-blue-500 text-white px-4 py-2 rounded-full text-sm"
+                >
+                  Profile
+                </Link>
+              )}
 
-    <Link
-      href="/campaign/history"
-      className="block text-sm text-gray-700 px-4 py-2 hover:underline"
-    >
-      Riwayat
-    </Link>
+              <p className="text-sm text-gray-700 font-mono px-4">{shortAddress}</p>
 
-    <button
-      onClick={logout}
-      className="block w-full text-left bg-white hover:bg-gray-100 border border-gray-400 text-gray-700 px-4 py-2 rounded-full text-sm"
-    >
-      Logout
-    </button>
-  </>
-
-
+              <button
+                onClick={logout}
+                className="block w-full text-left bg-white hover:bg-gray-100 border border-gray-400 text-gray-700 px-4 py-2 rounded-full text-sm"
+              >
+                Logout
+              </button>
+            </>
           ) : (
             <button
               onClick={login}
