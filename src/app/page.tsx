@@ -16,7 +16,7 @@ type CampaignData = {
 };
 
 
-const FACTORY_ADDRESS = '0x331ad80aEAE0add547e9adC9Bd702215C6433Fe9';
+const FACTORY_ADDRESS = '0x8065276a501704f8ef31eA76Fb342C5Cd02B7a78';
 
 const FACTORY_ABI = [
   {
