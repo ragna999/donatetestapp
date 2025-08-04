@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ethers, Contract } from 'ethers';
 import Link from 'next/link';
 
-const FACTORY_ADDRESS = '0x8065276a501704f8ef31eA76Fb342C5Cd02B7a78';
+const FACTORY_ADDRESS = '0xFDa9BEB30b7497d416Cbcb866cF00AF525a710eE';
 const FACTORY_ABI = [
   {
     inputs: [],
