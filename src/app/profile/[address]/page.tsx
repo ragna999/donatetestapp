@@ -9,20 +9,47 @@ const FACTORY_ADDRESS = '0xFDa9BEB30b7497d416Cbcb866cF00AF525a710eE';
 
 const FACTORY_ABI = [
   {
-    inputs: [],
-    name: 'getCampaigns',
-    outputs: [{ internalType: 'address[]', name: '', type: 'address[]' }],
-    stateMutability: 'view',
+    name: 'getAllCampaigns',
     type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address[]', name: '' }],
+  },
+  {
+    name: 'isApproved',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: '', type: 'address' }],
+    outputs: [{ type: 'bool', name: '' }],
+  },
+  {
+    name: 'deniedCampaigns',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: '', type: 'address' }],
+    outputs: [{ type: 'bool', name: '' }],
+  },
+  {
+    name: 'approveCampaign',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: '_campaign', type: 'address' }],
+    outputs: [],
+  },
+  {
+    name: 'denyCampaign',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: '_campaign', type: 'address' }],
+    outputs: [],
   },
 ];
 
 const CAMPAIGN_ABI = [
   { name: 'title', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
   { name: 'description', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
-  { name: 'image', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] }, // ✅ tambahkan ini
+  { name: 'image', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
   { name: 'goal', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
-  { name: 'totalDonated', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
   { name: 'creator', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] },
 ];
 
