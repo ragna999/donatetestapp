@@ -200,6 +200,14 @@ export default function Navbar() {
                   Profile
                 </Link>
               )}
+
+              <Link
+                 href="/campaign/history"
+                 className="text-sm text-gray-700 hover:underline"
+                >
+                  Riwayat
+                </Link>
+
               <button
                 onClick={logout}
                 className="text-sm bg-white hover:bg-gray-100 border border-gray-400 text-gray-700 px-4 py-1.5 rounded-full"
@@ -239,6 +247,14 @@ export default function Navbar() {
                   Profile
                 </Link>
               )}
+
+              <Link
+                href="/campaign/history"
+              className="block text-sm text-gray-700 px-2"
+                >
+               Riwayat
+              </Link>
+
               <button
                 onClick={logout}
                 className="block w-full text-left bg-white hover:bg-gray-100 border border-gray-400 text-gray-700 px-4 py-2 rounded-full text-sm"
