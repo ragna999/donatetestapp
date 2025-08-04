@@ -49,15 +49,9 @@ export default function CampaignHistoryPage() {
         );
         const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
         const addresses: string[] = await factory.getApprovedCampaigns();
-        console.log("🔥 Approved campaign addresses:", addresses);
-
-        const campaignsFinished: CampaignData[] = [];
-
-        for (const addr of addresses) {
-          try {
-            const code = await provider.getCode(addr);
-            if (code === '0x') continue;
-
+  
+        const results = await Promise.all(
+          addresses.map(async (addr) => {
             const c = new Contract(addr, CAMPAIGN_ABI, provider);
             const [title, description, image, goal, raised, deadline] = await Promise.all([
               c.title(),
@@ -67,43 +61,36 @@ export default function CampaignHistoryPage() {
               c.totalDonated(),
               c.deadline(),
             ]);
-
+  
             const now = Math.floor(Date.now() / 1000);
             const isFinished = now > Number(deadline) || BigInt(raised) >= BigInt(goal);
-
-            console.log(`📍 ${addr}`);
-            console.log(`💰 ${ethers.formatEther(raised)} / ${ethers.formatEther(goal)}`);
-            console.log(`⏰ Sekarang: ${now}, deadline: ${Number(deadline)}`);
-            console.log(`✅ isFinished: ${isFinished}`);
-
-            if (isFinished) {
-              campaignsFinished.push({
-                address: addr,
-                title,
-                description,
-                image,
-                goal: ethers.formatEther(goal),
-                raised: ethers.formatEther(raised),
-                deadline: Number(deadline),
-                isFinished,
-              });
-            }
-          } catch (innerErr: any) {
-            console.warn('⚠️ Lewat campaign rusak:', addr, innerErr?.message || innerErr);
-          }
-        }
-
-        setCampaigns(campaignsFinished);
-        console.log("✅ Total finished:", campaignsFinished.length);
+  
+            return {
+              address: addr,
+              title,
+              description,
+              image,
+              goal: ethers.formatEther(goal),
+              raised: ethers.formatEther(raised),
+              deadline: Number(deadline),
+              isFinished,
+            };
+          })
+        );
+  
+        // ✅ FILTER campaign yang sudah selesai
+        const finishedCampaigns = results.filter(c => c.isFinished);
+        setCampaigns(finishedCampaigns);
       } catch (err) {
-        console.error('❌ Error utama fetch campaign:', err);
+        console.error('❌ fetchData error:', err);
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchData();
   }, []);
+  
 
   return (
     <main className="min-h-screen bg-[#0f172a] text-white py-12 px-6">
