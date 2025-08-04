@@ -90,7 +90,9 @@ export default function HomePage() {
         // setCampaigns(active);
         
         // ✅ ATAU tampilkan semua dengan badge:
-        setCampaigns(results);
+        const activeCampaigns = results.filter((c) => !c.isFinished);
+        setCampaigns(activeCampaigns); // ✅ hanya campaign aktif yang ditampilkan
+        
         
       } catch (error) {
         console.error('❌ Gagal ambil data campaign:', error);
