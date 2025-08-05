@@ -72,11 +72,7 @@ export default function CampaignDetailPage() {
         const donations = donationsRaw.map((d: any) => ({
           donor: d.donor,
           amount: ethers.formatEther(d.amount),
-          
         }));
-        const now = Math.floor(Date.now() / 1000);
-        const isFinished = now > Number(deadline) || totalDonated >= goal;
-
 
         setData({
           title,
@@ -88,10 +84,8 @@ export default function CampaignDetailPage() {
           location,
           deadline: Number(deadline),
           social,
-          donations,
-          isFinished, // ✅ ini penting
+          donations
         });
-        
 
         setReady(true);
 
@@ -183,20 +177,13 @@ while (true) {
     return await res.json();
   }
 
-
-  
   async function handleDonate(e: React.FormEvent) {
     e.preventDefault();
     if (!window.ethereum || !donationAmount) return;
-    if (data?.isFinished) {
-      alert("Campaign sudah selesai. Donasi ditutup.");
-      return;
-    }
-  
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
     const contract = new Contract(id, CAMPAIGN_ABI, signer);
-  
+
     try {
       const tx = await contract.donate({ value: ethers.parseEther(donationAmount) });
       await tx.wait();
@@ -205,7 +192,6 @@ while (true) {
       alert('Donasi gagal');
     }
   }
-  
 
   async function handleWithdraw() {
     if (!window.ethereum) return;
@@ -293,31 +279,25 @@ return (
       Address: <span className="text-blue-500">{id}</span>
     </p>
 
-    {currentAccount && !data?.isFinished ? (
-  <form onSubmit={handleDonate} className="mb-10">
-    <label className="block text-sm font-medium mb-2 text-gray-300">Jumlah Donasi (STT)</label>
-    <input
-      type="number"
-      step="any"
-      value={donationAmount}
-      onChange={(e) => setDonationAmount(e.target.value)}
-      className="w-full px-4 py-3 rounded-md bg-gray-800 border border-gray-700 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      placeholder="Contoh: 0.01"
-    />
-    <button
-      type="submit"
-      className="mt-4 w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-md hover:from-blue-500 hover:to-indigo-500 transition-all duration-200"
-    >
-      🚀 Donasi Sekarang
-    </button>
-  </form>
-) : currentAccount && data?.isFinished ? (
-  <div className="mb-10 text-sm text-red-400 font-medium">
-    ⛔ Campaign ini telah selesai. Donasi tidak tersedia.
-  </div>
-) : null}
-
-
+    {currentAccount && (
+      <form onSubmit={handleDonate} className="mb-10">
+        <label className="block text-sm font-medium mb-2 text-gray-300">Jumlah Donasi (STT)</label>
+        <input
+          type="number"
+          step="any"
+          value={donationAmount}
+          onChange={(e) => setDonationAmount(e.target.value)}
+          className="w-full px-4 py-3 rounded-md bg-gray-800 border border-gray-700 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Contoh: 0.01"
+        />
+        <button
+          type="submit"
+          className="mt-4 w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-md hover:from-blue-500 hover:to-indigo-500 transition-all duration-200"
+        >
+          🚀 Donasi Sekarang
+        </button>
+      </form>
+    )}
 
     {isOwner && (
       <button
