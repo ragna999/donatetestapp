@@ -63,8 +63,7 @@ export default function CampaignHistoryPage() {
               c.image(),
               c.goal(),
               c.totalDonated(),
-              c.deadline(),
-              c.isFinished()
+              c.deadline()
             ]);
   
             const now = Math.floor(Date.now() / 1000);
