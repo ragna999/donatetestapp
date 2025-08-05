@@ -19,18 +19,11 @@ const FACTORY_ADDRESS = '0xFDa9BEB30b7497d416Cbcb866cF00AF525a710eE';
 
 const FACTORY_ABI = [
   {
-    name: 'getAllCampaigns',
+    name: 'getApprovedCampaigns',
     type: 'function',
     stateMutability: 'view',
     inputs: [],
     outputs: [{ type: 'address[]', name: '' }],
-  },
-  {
-    name: 'campaignToCreator',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: '', type: 'address' }],
-    outputs: [{ type: 'address', name: '' }],
   },
 ];
 
@@ -71,6 +64,7 @@ export default function CampaignHistoryPage() {
               c.goal(),
               c.totalDonated(),
               c.deadline(),
+              c.isFinished()
             ]);
   
             const now = Math.floor(Date.now() / 1000);
