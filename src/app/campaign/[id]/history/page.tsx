@@ -83,7 +83,8 @@ export default function CampaignHistoryPage() {
         );
 
         const finished = results.filter(c => c.isFinished);
-        setCampaigns(finished);
+        setCampaigns(results); // tampilkan semua tanpa filter
+
       } catch (err) {
         console.error('❌ fetchData error:', err);
       } finally {
