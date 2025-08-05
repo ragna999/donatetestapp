@@ -49,11 +49,11 @@ export default function CampaignHistoryPage() {
         );
         const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
         const addresses: string[] = await factory.getApprovedCampaigns();
-
-        // ✅ Validasi hanya address yang ada smart contract
+  
+        // ✅ Filter address yang valid (smart contract)
         const codes = await Promise.all(addresses.map(addr => provider.getCode(addr)));
-        const validAddresses = addresses.filter((addr, i) => codes[i] !== '0x');
-
+        const validAddresses = addresses.filter((_addr, i) => codes[i] !== '0x');
+  
         const results = await Promise.all(
           validAddresses.map(async (addr) => {
             const c = new Contract(addr, CAMPAIGN_ABI, provider);
@@ -65,10 +65,10 @@ export default function CampaignHistoryPage() {
               c.totalDonated(),
               c.deadline(),
             ]);
-
+  
             const now = Math.floor(Date.now() / 1000);
             const isFinished = now > Number(deadline) || BigInt(raised) >= BigInt(goal);
-
+  
             return {
               address: addr,
               title,
@@ -81,19 +81,20 @@ export default function CampaignHistoryPage() {
             };
           })
         );
-
+  
         const finished = results.filter(c => c.isFinished);
-        setCampaigns(results); // tampilkan semua tanpa filter
-
+        setCampaigns(finished); // ✅ ONLY campaign yang sudah selesai
+  
       } catch (err) {
         console.error('❌ fetchData error:', err);
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchData();
   }, []);
+  
 
   return (
     <main className="min-h-screen bg-[#0f172a] text-white py-12 px-6">
