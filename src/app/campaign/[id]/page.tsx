@@ -183,18 +183,20 @@ while (true) {
     return await res.json();
   }
 
-  if (data?.isFinished) {
-    alert("Campaign sudah selesai. Donasi ditutup.");
-    return;
-  }
+
   
   async function handleDonate(e: React.FormEvent) {
     e.preventDefault();
     if (!window.ethereum || !donationAmount) return;
+    if (data?.isFinished) {
+      alert("Campaign sudah selesai. Donasi ditutup.");
+      return;
+    }
+  
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
     const contract = new Contract(id, CAMPAIGN_ABI, signer);
-
+  
     try {
       const tx = await contract.donate({ value: ethers.parseEther(donationAmount) });
       await tx.wait();
@@ -203,6 +205,7 @@ while (true) {
       alert('Donasi gagal');
     }
   }
+  
 
   async function handleWithdraw() {
     if (!window.ethereum) return;
