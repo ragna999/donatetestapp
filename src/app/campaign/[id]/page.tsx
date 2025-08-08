@@ -30,6 +30,17 @@ const CAMPAIGN_ABI = [
       }
     ]
   },
+{
+    name: 'createWithdrawRequest',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'amount', type: 'uint256' },
+      { name: 'reason', type: 'string' }
+    ],
+    outputs: []
+  },
+
   { name: 'donate', type: 'function', stateMutability: 'payable', inputs: [], outputs: [] },
   { name: 'withdraw', type: 'function', stateMutability: 'nonpayable', inputs: [], outputs: [] }
 ];
