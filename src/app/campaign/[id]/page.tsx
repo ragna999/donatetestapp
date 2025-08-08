@@ -101,8 +101,9 @@ export default function CampaignDetailPage() {
         setReady(true);
 
         if (window.ethereum) {
-          const browserProvider = new ethers.BrowserProvider(window.ethereum);
-          const signer = await browserProvider.getSigner();
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner();
+          
           const address = await signer.getAddress();
           setCurrentAccount(address);
           if (address.toLowerCase() === creator.toLowerCase()) {
