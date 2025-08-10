@@ -18,7 +18,14 @@ const FACTORY_ABI = [
   { name: 'denyCampaign',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'address' }], outputs: [] },
 ] as const;
 
-// Minimal ABI untuk halaman admin membaca/menyetujui withdraw
+// Tambahan ABI khusus withdraw via Factory (dipakai admin)
+const FACTORY_WITHDRAW_ABI = [
+  { name: 'approveWithdrawRequest', type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'address' }, { type: 'uint256' }], outputs: [] },
+  { name: 'denyWithdrawRequest',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'address' }, { type: 'uint256' }], outputs: [] },
+  { name: 'setWithdrawStatus',      type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'address' }, { type: 'uint256' }, { type: 'uint8' }], outputs: [] },
+] as const;
+
+// Minimal ABI untuk baca data + fallback approve/deny langsung di campaign
 const CAMPAIGN_ABI = [
   { name: 'title',    type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
   { name: 'image',    type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
@@ -33,16 +40,11 @@ const CAMPAIGN_ABI = [
       { name: 'reason',    type: 'string'  },
       { name: 'timestamp', type: 'uint256' },
       { name: 'status',    type: 'uint8'   }, // 0=Pending, 1=Approved, 2=Denied
-      // kalau kontrak punya 'withdrawn' bool, tambahin di sini juga
     ],
   },
-
-  // Opsi 1 — fungsi spesifik
   { name: 'approveWithdrawRequest', type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
   { name: 'denyWithdrawRequest',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
-
-  // Opsi 2 — setter status generik (index, status)
-  { name: 'setWithdrawStatus', type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }, { type: 'uint8' }], outputs: [] },
+  { name: 'setWithdrawStatus',      type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }, { type: 'uint8' }], outputs: [] },
 ] as const;
 
 type PendingCampaign = {
@@ -57,7 +59,7 @@ type PendingRequest = {
   amount: string;
   reason: string;
   timestamp: number;
-  campaign: string; // address campaign
+  campaign: string;
   title: string;
   creator: string;
 };
@@ -158,7 +160,7 @@ export default function AdminPage() {
                 });
               }
             } catch {
-              break;
+              break; // udah mentok indexnya
             }
           }
         } catch {
@@ -180,6 +182,67 @@ export default function AdminPage() {
     fetchPendingCampaigns();
     fetchPendingWithdraws();
   }, [authenticated]);
+
+  // ==== helper: set status withdraw (approve/deny) ====
+  async function setWithdrawStatusTx(campaignAddr: string, index: number, approve: boolean) {
+    const eth = (window as any).ethereum;
+    if (!eth) throw new Error('Wallet tidak ditemukan');
+
+    const provider = new ethers.BrowserProvider(eth);
+    const signer = await provider.getSigner();
+
+    // 1) via Factory (role admin dicek di sini)
+    const factory = new Contract(FACTORY_ADDRESS, FACTORY_WITHDRAW_ABI, signer);
+    try {
+      if (approve && typeof (factory as any).approveWithdrawRequest === 'function') {
+        const tx = await (factory as any).approveWithdrawRequest(campaignAddr, index);
+        await tx.wait();
+        return;
+      }
+      if (!approve && typeof (factory as any).denyWithdrawRequest === 'function') {
+        const tx = await (factory as any).denyWithdrawRequest(campaignAddr, index);
+        await tx.wait();
+        return;
+      }
+    } catch {
+      try {
+        const status = approve ? 1 : 2;
+        const tx = await (factory as any).setWithdrawStatus(campaignAddr, index, status);
+        await tx.wait();
+        return;
+      } catch {
+        // fallback ke campaign langsung
+      }
+    }
+
+    // 2) fallback ke DonationCampaign
+    const CAMPAIGN_WITHDRAW_ABI = [
+      { name: 'approveWithdrawRequest', type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
+      { name: 'denyWithdrawRequest',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
+      { name: 'setWithdrawStatus',      type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }, { type: 'uint8' }], outputs: [] },
+    ] as const;
+
+    const c = new Contract(campaignAddr, CAMPAIGN_WITHDRAW_ABI, signer);
+
+    try {
+      if (approve && typeof (c as any).approveWithdrawRequest === 'function') {
+        const tx = await (c as any).approveWithdrawRequest(index);
+        await tx.wait();
+        return;
+      }
+      if (!approve && typeof (c as any).denyWithdrawRequest === 'function') {
+        const tx = await (c as any).denyWithdrawRequest(index);
+        await tx.wait();
+        return;
+      }
+    } catch {
+      // lanjut ke setter langsung
+    }
+
+    const status = approve ? 1 : 2;
+    const tx = await (c as any).setWithdrawStatus(index, status);
+    await tx.wait();
+  }
 
   // ==== campaign actions ====
   const handleApproveCampaign = async (address: string): Promise<void> => {
@@ -206,54 +269,24 @@ export default function AdminPage() {
     }
   };
 
-  // ==== withdraw actions (typed, no implicit any) ====
+  // ==== withdraw actions (pakai helper di atas; tidak ada duplikasi) ====
   const handleApproveWithdraw = async (campaignAddr: string, index: number): Promise<void> => {
     try {
-      const signer = await getSigner();
-      const c = new Contract(campaignAddr, CAMPAIGN_ABI, signer);
-
-      // coba fungsi spesifik dulu
-      try {
-        if (typeof (c as any).approveWithdrawRequest === 'function') {
-          await safeTx((c as any).approveWithdrawRequest(index));
-        } else {
-          // fallback ke setter status
-          await safeTx((c as any).setWithdrawStatus(index, 1)); // 1=Approved
-        }
-      } catch (inner) {
-        // kalau spesifik gagal, coba setter
-        await safeTx((c as any).setWithdrawStatus(index, 1));
-      }
-
+      await setWithdrawStatusTx(campaignAddr, index, true);
       alert('✅ Withdraw request disetujui');
       await fetchPendingWithdraws();
-    } catch (e) {
-      alert('❌ Gagal approve withdraw: ' + errText(e));
+    } catch (e: any) {
+      alert('❌ Gagal approve withdraw: ' + (e?.shortMessage || e?.reason || e?.message || 'Unknown error'));
     }
   };
 
   const handleDenyWithdraw = async (campaignAddr: string, index: number): Promise<void> => {
     try {
-      const signer = await getSigner();
-      const c = new Contract(campaignAddr, CAMPAIGN_ABI, signer);
-
-      // coba fungsi spesifik dulu
-      try {
-        if (typeof (c as any).denyWithdrawRequest === 'function') {
-          await safeTx((c as any).denyWithdrawRequest(index));
-        } else {
-          // fallback ke setter status
-          await safeTx((c as any).setWithdrawStatus(index, 2)); // 2=Denied
-        }
-      } catch (inner) {
-        // kalau spesifik gagal, coba setter
-        await safeTx((c as any).setWithdrawStatus(index, 2));
-      }
-
+      await setWithdrawStatusTx(campaignAddr, index, false);
       alert('⛔ Withdraw request ditolak');
       await fetchPendingWithdraws();
-    } catch (e) {
-      alert('❌ Gagal menolak withdraw: ' + errText(e));
+    } catch (e: any) {
+      alert('❌ Gagal menolak withdraw: ' + (e?.shortMessage || e?.reason || e?.message || 'Unknown error'));
     }
   };
 
