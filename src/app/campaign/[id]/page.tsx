@@ -291,62 +291,74 @@ export default function CampaignDetailPage() {
 
   // withdraw approved request: cari index pertama yg status=1
   // withdraw approved request: pilih index approved yang benar-benar executable
+// withdraw approved request: pilih index approved yang benar-benar executable
 async function handleWithdraw() {
   try {
-    // kumpulkan semua index yang status=1
+    // kumpulkan semua index yg status=1
     const approvedIdxs = withdrawals
       .map((w, i) => (w.status === 1 ? i : -1))
       .filter((i) => i >= 0);
 
-    if (approvedIdxs.length === 0) return alert('Belum ada request yang disetujui admin');
+    if (approvedIdxs.length === 0) {
+      return alert('Belum ada request yang disetujui admin');
+    }
 
     if (!(window as any).ethereum) return alert('Wallet belum terhubung');
     const browserProvider = new ethers.BrowserProvider((window as any).ethereum);
     const signer = await browserProvider.getSigner();
     const contract = new Contract(id, CAMPAIGN_ABI, signer);
 
-    // 1) cari index yang lolos preflight (staticCall). kalau gagal, coba provider.call biar dapat pesan revert mentah
+    // 1) Cek saldo kontrak: harus cukup untuk request yang disetujui
+    const bal = await (signer.provider as ethers.Provider).getBalance(id);
+
+    // 2) Pilih index yang lolos preflight (staticCall) DAN amount <= saldo
     let chosen: bigint | null = null;
     for (const i of approvedIdxs) {
+      const req = withdrawals[i];
+      const need = ethers.parseEther(req.amount); // req.amount sudah string (formatEther)
+      if (need > bal) continue; // saldo ga cukup → lanjut index lain
+
       const idx = BigInt(i);
       try {
         await (contract as any).withdraw.staticCall(idx);
-        chosen = idx; // ok: bisa dieksekusi
+        chosen = idx;
         break;
       } catch (e) {
-        // coba manual call untuk dapetin reason; kalau memang gak bisa, lanjut index berikutnya
+        // coba manual call biar tahu alasan; kalau tetap gagal, lanjut
         try {
           const iface = new ethers.Interface(['function withdraw(uint256)']);
           const data = iface.encodeFunctionData('withdraw', [idx]);
           await (signer.provider as ethers.Provider).call({ to: id, data });
-          chosen = idx; // kalau provider.call gak throw, juga boleh
+          chosen = idx;
           break;
         } catch (raw) {
-          console.warn(`Index ${i} gagal preflight:`, errText(raw));
-          // lanjut cek index berikutnya
+          console.warn(`Index ${i} gagal preflight:`, raw);
         }
       }
     }
 
     if (chosen === null) {
-      return alert('Tidak ada request Approved yang bisa dieksekusi sekarang. Coba cek saldo/aturan kontrak.');
+      // kasih info tambahan: apakah saldo memang kurang?
+      const approvedNeed = approvedIdxs
+        .map((i) => ethers.parseEther(withdrawals[i].amount))
+        .reduce((a, b) => (a > b ? a : b),);
+      const balEth = ethers.formatEther(bal);
+      const needEth = ethers.formatEther(approvedNeed);
+      return alert(`Tidak ada request Approved yang bisa dieksekusi sekarang. Cek saldo/aturan kontrak.\nSaldo kontrak: ${balEth} STT • Kebutuhan tertinggi: ${needEth} STT`);
     }
 
-    // 2) kirim transaksi benerannya
-    try {
-      const tx = await (contract as any).withdraw(chosen);
-      await tx.wait();
-      alert('Withdraw berhasil!');
-      window.location.reload();
-    } catch (sendErr) {
-      console.error('RAW REVERT (send withdraw) >>>', sendErr);
-      alert('Withdraw gagal: ' + errText(sendErr));
-    }
+    // 3) Kirim transaksi
+    const tx = await (contract as any).withdraw(chosen);
+    await tx.wait();
+    alert('Withdraw berhasil!');
+    window.location.reload();
   } catch (err: any) {
-    console.error('❌ Withdraw gagal:', err);
-    alert('Withdraw gagal: ' + errText(err));
+    console.error('RAW REVERT (withdraw) >>>', err);
+    // pakai formatter error yang lengkap (kalau kamu sudah menambahkan errText di file ini, pakai itu)
+    alert('Withdraw gagal: ' + (err?.info?.error?.message || err?.shortMessage || err?.reason || err?.message || 'Unknown error'));
   }
 }
+
 
   
   
