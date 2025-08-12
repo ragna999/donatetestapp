@@ -1,4 +1,4 @@
-// Final FIXED CampaignDetailPage.tsx — with withdraw index + better errors + request form
+// Final FIXED CampaignDetailPage.tsx — with Withdrawn status & history section
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -46,12 +46,11 @@ const CAMPAIGN_ABI = [
       { name: 'amount', type: 'uint256' },
       { name: 'reason', type: 'string' },
       { name: 'timestamp', type: 'uint256' },
-      { name: 'status', type: 'uint8' },   // 0=Pending,1=Approved,2=Denied
-      // kalau kontrak lo punya 'withdrawn' bool, tinggal tambahin satu output lagi di sini
+      { name: 'status', type: 'uint8' },   // 0=Pending,1=Approved,2=Finalized (Withdrawn/Denied)
     ]
   },
 
-  // Create request — per kontrak lo pakai nama "requestWithdraw" (bukan createWithdrawRequest)
+  // Create request — kontrak: requestWithdraw(uint amount, string reason)
   {
     name: 'requestWithdraw',
     type: 'function',
@@ -63,17 +62,7 @@ const CAMPAIGN_ABI = [
     outputs: []
   },
 
-  // Withdraw dana: kontrak lo butuh index
-  {
-    name: 'withdraw',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [{ name: 'index', type: 'uint256' }],
-    outputs: []
-  },
-
-  //execute withdraw
-
+  // Execute withdraw di kontrak: executeWithdraw(uint256)
   {
     name: 'executeWithdraw',
     type: 'function',
@@ -82,7 +71,6 @@ const CAMPAIGN_ABI = [
     outputs: []
   },
 
-  
   // Donate
   { name: 'donate', type: 'function', stateMutability: 'payable', inputs: [], outputs: [] }
 ];
@@ -100,17 +88,14 @@ export default function CampaignDetailPage() {
   const [donationAmount, setDonationAmount] = useState('');
   const [timeLeft, setTimeLeft] = useState('');
 
-  const [withdrawals, setWithdrawals] = useState<
-    { amount: string; reason: string; timestamp: number; status: number }[]
-  >([]);
+  type WithdrawRow = { amount: string; reason: string; timestamp: number; status: number };
+  const [withdrawals, setWithdrawals] = useState<WithdrawRow[]>([]);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawReason, setWithdrawReason] = useState('');
 
   const provider = useMemo(() => new ethers.JsonRpcProvider(RPC), []);
 
-
-  //helper//
-
+  // ===== helper: error text (decode Error(string) + nested JSON-RPC) =====
   function errText(err: any): string {
     const nested =
       err?.info?.error?.message ||
@@ -119,7 +104,7 @@ export default function CampaignDetailPage() {
       err?.shortMessage ||
       err?.reason ||
       err?.message;
-  
+
     try {
       const body = err?.body || err?.info?.error?.body;
       if (typeof body === 'string' && body.startsWith('{')) {
@@ -128,7 +113,7 @@ export default function CampaignDetailPage() {
         if (m) return m;
       }
     } catch {}
-  
+
     try {
       const data: string | undefined = err?.info?.error?.data || err?.data || err?.error?.data;
       if (typeof data === 'string' && data.startsWith('0x08c379a0')) {
@@ -137,10 +122,10 @@ export default function CampaignDetailPage() {
         if (msg) return String(msg);
       }
     } catch {}
-  
+
     return nested || String(err || 'Unknown error');
   }
-  
+
   useEffect(() => {
     (async () => {
       try {
@@ -185,7 +170,7 @@ export default function CampaignDetailPage() {
         }));
 
         // fetch withdraw requests via requests(i) until revert
-        const reqs: { amount: string; reason: string; timestamp: number; status: number }[] = [];
+        const reqs: WithdrawRow[] = [];
         for (let i = 0; i < 1000; i++) {
           try {
             const r = await contract.requests(i);
@@ -282,7 +267,6 @@ export default function CampaignDetailPage() {
       const signer = await browserProvider.getSigner();
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
 
-      // NOTE: kontrak lo: requestWithdraw(uint amount, string reason)
       const tx = await contract.requestWithdraw(
         ethers.parseEther(withdrawAmount),
         withdrawReason.trim()
@@ -300,23 +284,23 @@ export default function CampaignDetailPage() {
     }
   }
 
-  // withdraw approved request: cari index pertama yg status=1
+  // withdraw approved request (choose an executable index; call executeWithdraw)
   async function handleWithdraw() {
     try {
       const approvedIdxs = withdrawals
         .map((w, i) => (w.status === 1 ? i : -1))
         .filter((i) => i >= 0);
-  
+
       if (approvedIdxs.length === 0) return alert('Belum ada request yang disetujui admin');
-  
+
       if (!(window as any).ethereum) return alert('Wallet belum terhubung');
       const browserProvider = new ethers.BrowserProvider((window as any).ethereum);
       const signer = await browserProvider.getSigner();
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
-  
-      // saldo kontrak (opsional, buat info UX)
+
+      // saldo kontrak (info UX)
       const bal = await (signer.provider as ethers.Provider).getBalance(id);
-  
+
       // pilih index Approved yang lolos preflight
       let chosen: bigint | null = null;
       for (const i of approvedIdxs) {
@@ -332,14 +316,13 @@ export default function CampaignDetailPage() {
             await (signer.provider as ethers.Provider).call({ to: id, data });
             chosen = idx;
             break;
-          } catch (raw) {
+          } catch {
             // lanjut cek index berikutnya
           }
         }
       }
-  
+
       if (chosen === null) {
-        // info tambahan (opsional)
         const maxNeed = approvedIdxs
           .map((i) => ethers.parseEther(withdrawals[i].amount))
           .reduce((a, b) => (a > b ? a : b), BigInt(0));
@@ -348,8 +331,7 @@ export default function CampaignDetailPage() {
           `Saldo kontrak: ${ethers.formatEther(bal)} STT • Kebutuhan tertinggi: ${ethers.formatEther(maxNeed)} STT`
         );
       }
-  
-      // kirim tx benerannya
+
       const tx = await (contract as any).executeWithdraw(chosen);
       await tx.wait();
       alert('Withdraw berhasil!');
@@ -359,17 +341,26 @@ export default function CampaignDetailPage() {
       alert('Withdraw gagal: ' + errText(err));
     }
   }
-  
-
-
-  
-  
 
   if (!ready || !data) {
     return <p className="p-6 text-white">Loading campaign...</p>;
   }
 
   const hasApproved = withdrawals.some((w) => w.status === 1);
+
+  // ===== NEW: status label & withdrawn history =====
+  function statusLabel(r: WithdrawRow) {
+    if (r.status === 0) return { text: '🟡 Pending',  cls: 'text-yellow-400' };
+    if (r.status === 1) return { text: '✅ Approved', cls: 'text-green-400' };
+    // status === 2 → finalized.
+    // Heuristik: banyak kontrak nge-zero-in amount setelah execute → anggap Withdrawn kalau amount==0
+    if (Number(r.amount) === 0) return { text: '💸 Withdrawn', cls: 'text-blue-400' };
+    return { text: '📦 Completed', cls: 'text-blue-400' }; // fallback kalau kontrak tidak zero-in amount
+  }
+
+  const withdrawnHistory = withdrawals
+    .map((r, i) => ({ ...r, index: i }))
+    .filter((r) => r.status === 2);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
@@ -438,7 +429,7 @@ export default function CampaignDetailPage() {
         </form>
       )}
 
-      {/* Form request withdraw — hanya OWNER & (boleh lo batasi: saat belum selesai atau kapanpun) */}
+      {/* Form request withdraw — hanya OWNER */}
       {isOwner && (
         <form onSubmit={handleRequestWithdraw} className="mb-10 p-4 rounded-lg bg-gray-800 border border-gray-700">
           <h3 className="font-semibold mb-3">📝 Ajukan Permintaan Withdraw</h3>
@@ -509,9 +500,10 @@ export default function CampaignDetailPage() {
                 </div>
                 <div className="text-xs text-gray-400">🕒 {new Date(r.timestamp * 1000).toLocaleString()}</div>
                 <div>
-                  {r.status === 0 && <span className="text-yellow-400 font-mono">🟡 Pending</span>}
-                  {r.status === 1 && <span className="text-green-400 font-mono">✅ Approved</span>}
-                  {r.status === 2 && <span className="text-red-400 font-mono">❌ Denied</span>}
+                  {(() => {
+                    const s = statusLabel(r);
+                    return <span className={`${s.cls} font-mono`}>{s.text}</span>;
+                  })()}
                 </div>
               </li>
             ))
@@ -519,6 +511,28 @@ export default function CampaignDetailPage() {
             <p className="text-sm text-gray-500">Belum ada permintaan withdrawal.</p>
           )}
         </ul>
+
+        {/* NEW: Riwayat Withdraw (finalized) */}
+        {withdrawnHistory.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold mb-3">📚 Riwayat Withdraw</h3>
+            <ul className="space-y-3">
+              {withdrawnHistory.map((r) => {
+                const withdrawn = Number(r.amount) === 0;
+                return (
+                  <li key={`wd-${r.index}`} className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-sm">
+                    <div className="text-white font-semibold">
+                      💸 {withdrawn ? 'Withdrawn' : 'Completed'} — <span className="text-gray-400 italic">{r.reason}</span>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      ID: #{r.index} • {new Date(r.timestamp * 1000).toLocaleString()}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
