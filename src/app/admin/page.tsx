@@ -18,14 +18,7 @@ const FACTORY_ABI = [
   { name: 'denyCampaign',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'address' }], outputs: [] },
 ] as const;
 
-// Tambahan ABI khusus withdraw via Factory (dipakai admin)
-const FACTORY_WITHDRAW_ABI = [
-  { name: 'approveWithdrawRequest', type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'address' }, { type: 'uint256' }], outputs: [] },
-  { name: 'denyWithdrawRequest',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'address' }, { type: 'uint256' }], outputs: [] },
-  { name: 'setWithdrawStatus',      type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'address' }, { type: 'uint256' }, { type: 'uint8' }], outputs: [] },
-] as const;
-
-// Minimal ABI untuk baca data + fallback approve/deny langsung di campaign
+// Minimal ABI untuk baca data + approve/deny langsung di campaign
 const CAMPAIGN_ABI = [
   { name: 'title',    type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
   { name: 'image',    type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
@@ -78,7 +71,15 @@ export default function AdminPage() {
 
   // ==== helpers ====
   function errText(err: any): string {
-    return err?.shortMessage || err?.reason || err?.message || String(err || 'Unknown error');
+    return (
+      err?.info?.error?.message || // nested JSON-RPC (ethers v6)
+      err?.data?.message ||
+      err?.cause?.message ||
+      err?.shortMessage ||
+      err?.reason ||
+      err?.message ||
+      String(err || 'Unknown error')
+    );
   }
 
   async function getSigner(): Promise<ethers.Signer> {
@@ -184,6 +185,7 @@ export default function AdminPage() {
   }, [authenticated]);
 
   // ==== helper: set status withdraw (approve/deny) ====
+  // NOTE: Bypass Factory; langsung ke DonationCampaign untuk hindari "could not coalesce error"
   async function setWithdrawStatusTx(campaignAddr: string, index: number, approve: boolean) {
     const eth = (window as any).ethereum;
     if (!eth) throw new Error('Wallet tidak ditemukan');
@@ -191,57 +193,33 @@ export default function AdminPage() {
     const provider = new ethers.BrowserProvider(eth);
     const signer = await provider.getSigner();
 
-    // 1) via Factory (role admin dicek di sini)
-    const factory = new Contract(FACTORY_ADDRESS, FACTORY_WITHDRAW_ABI, signer);
+    const c = new Contract(
+      campaignAddr,
+      [
+        { name: 'approveWithdrawRequest', type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
+        { name: 'denyWithdrawRequest',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
+        { name: 'setWithdrawStatus',      type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }, { type: 'uint8' }], outputs: [] },
+      ] as const,
+      signer
+    );
+
+    // Coba path khusus dulu (approve/deny), lalu fallback ke setter langsung
     try {
-      if (approve && typeof (factory as any).approveWithdrawRequest === 'function') {
-        const tx = await (factory as any).approveWithdrawRequest(campaignAddr, index);
-        await tx.wait();
-        return;
-      }
-      if (!approve && typeof (factory as any).denyWithdrawRequest === 'function') {
-        const tx = await (factory as any).denyWithdrawRequest(campaignAddr, index);
-        await tx.wait();
-        return;
-      }
-    } catch {
-      try {
-        const status = approve ? 1 : 2;
-        const tx = await (factory as any).setWithdrawStatus(campaignAddr, index, status);
-        await tx.wait();
-        return;
-      } catch {
-        // fallback ke campaign langsung
-      }
-    }
-
-    // 2) fallback ke DonationCampaign
-    const CAMPAIGN_WITHDRAW_ABI = [
-      { name: 'approveWithdrawRequest', type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
-      { name: 'denyWithdrawRequest',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
-      { name: 'setWithdrawStatus',      type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }, { type: 'uint8' }], outputs: [] },
-    ] as const;
-
-    const c = new Contract(campaignAddr, CAMPAIGN_WITHDRAW_ABI, signer);
-
-    try {
-      if (approve && typeof (c as any).approveWithdrawRequest === 'function') {
+      if (approve) {
         const tx = await (c as any).approveWithdrawRequest(index);
         await tx.wait();
-        return;
-      }
-      if (!approve && typeof (c as any).denyWithdrawRequest === 'function') {
+      } else {
         const tx = await (c as any).denyWithdrawRequest(index);
         await tx.wait();
-        return;
       }
-    } catch {
-      // lanjut ke setter langsung
+      return;
+    } catch (e) {
+      // fallback ke setter langsung (1 = Approved, 2 = Denied)
+      const status = approve ? 1 : 2;
+      const tx = await (c as any).setWithdrawStatus(index, status);
+      await tx.wait();
+      return;
     }
-
-    const status = approve ? 1 : 2;
-    const tx = await (c as any).setWithdrawStatus(index, status);
-    await tx.wait();
   }
 
   // ==== campaign actions ====
@@ -276,7 +254,7 @@ export default function AdminPage() {
       alert('✅ Withdraw request disetujui');
       await fetchPendingWithdraws();
     } catch (e: any) {
-      alert('❌ Gagal approve withdraw: ' + (e?.shortMessage || e?.reason || e?.message || 'Unknown error'));
+      alert('❌ Gagal approve withdraw: ' + errText(e));
     }
   };
 
@@ -286,7 +264,7 @@ export default function AdminPage() {
       alert('⛔ Withdraw request ditolak');
       await fetchPendingWithdraws();
     } catch (e: any) {
-      alert('❌ Gagal menolak withdraw: ' + (e?.shortMessage || e?.reason || e?.message || 'Unknown error'));
+      alert('❌ Gagal menolak withdraw: ' + errText(e));
     }
   };
 
