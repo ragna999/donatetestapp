@@ -72,7 +72,7 @@ export default function AdminPage() {
   // ==== helpers ====
   function errText(err: any): string {
     return (
-      err?.info?.error?.message ||  // ethers v6 nested JSON-RPC
+      err?.info?.error?.message ||
       err?.data?.message ||
       err?.cause?.message ||
       err?.shortMessage ||
@@ -81,6 +81,7 @@ export default function AdminPage() {
       String(err || 'Unknown error')
     );
   }
+  
   
   
   
@@ -196,32 +197,32 @@ export default function AdminPage() {
     const provider = new ethers.BrowserProvider(eth);
     const signer = await provider.getSigner();
   
-    // ABI withdraw di DonationCampaign
-    const ABI = [
-      { name: 'approveWithdrawRequest', type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
-      { name: 'denyWithdrawRequest',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
-      { name: 'setWithdrawStatus',      type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }, { type: 'uint8' }], outputs: [] },
-    ] as const;
+    const c = new Contract(
+      campaignAddr,
+      [
+        { name: 'approveWithdraw', type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
+        { name: 'denyWithdraw',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
+      ] as const,
+      signer
+    );
   
-    const c = new Contract(campaignAddr, ABI, signer);
-  
-    // Preflight: static call buat nampilin reason kalau bakal revert
+    // Preflight
     try {
       if (approve) {
-        await (c as any).approveWithdrawRequest.staticCall(index);
+        await (c as any).approveWithdraw.staticCall(index);
       } else {
-        await (c as any).denyWithdrawRequest.staticCall(index);
+        await (c as any).denyWithdraw.staticCall(index);
       }
     } catch (e) {
       throw new Error(errText(e));
     }
   
-    // Kirim tx benerannya
+    // Tx
     if (approve) {
-      const tx = await (c as any).approveWithdrawRequest(index);
+      const tx = await (c as any).approveWithdraw(index);
       await tx.wait();
     } else {
-      const tx = await (c as any).denyWithdrawRequest(index);
+      const tx = await (c as any).denyWithdraw(index);
       await tx.wait();
     }
   }
