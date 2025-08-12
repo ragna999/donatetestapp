@@ -72,6 +72,17 @@ const CAMPAIGN_ABI = [
     outputs: []
   },
 
+  //execute withdraw
+
+  {
+    name: 'executeWithdraw',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: '_id', type: 'uint256' }],
+    outputs: []
+  },
+
+  
   // Donate
   { name: 'donate', type: 'function', stateMutability: 'payable', inputs: [], outputs: [] }
 ];
@@ -290,74 +301,65 @@ export default function CampaignDetailPage() {
   }
 
   // withdraw approved request: cari index pertama yg status=1
-  // withdraw approved request: pilih index approved yang benar-benar executable
-// withdraw approved request: pilih index approved yang benar-benar executable
-async function handleWithdraw() {
-  try {
-    // kumpulkan semua index yg status=1
-    const approvedIdxs = withdrawals
-      .map((w, i) => (w.status === 1 ? i : -1))
-      .filter((i) => i >= 0);
-
-    if (approvedIdxs.length === 0) {
-      return alert('Belum ada request yang disetujui admin');
-    }
-
-    if (!(window as any).ethereum) return alert('Wallet belum terhubung');
-    const browserProvider = new ethers.BrowserProvider((window as any).ethereum);
-    const signer = await browserProvider.getSigner();
-    const contract = new Contract(id, CAMPAIGN_ABI, signer);
-
-    // 1) Cek saldo kontrak: harus cukup untuk request yang disetujui
-    const bal = await (signer.provider as ethers.Provider).getBalance(id);
-
-    // 2) Pilih index yang lolos preflight (staticCall) DAN amount <= saldo
-    let chosen: bigint | null = null;
-    for (const i of approvedIdxs) {
-      const req = withdrawals[i];
-      const need = ethers.parseEther(req.amount); // req.amount sudah string (formatEther)
-      if (need > bal) continue; // saldo ga cukup → lanjut index lain
-
-      const idx = BigInt(i);
-      try {
-        await (contract as any).withdraw.staticCall(idx);
-        chosen = idx;
-        break;
-      } catch (e) {
-        // coba manual call biar tahu alasan; kalau tetap gagal, lanjut
+  async function handleWithdraw() {
+    try {
+      const approvedIdxs = withdrawals
+        .map((w, i) => (w.status === 1 ? i : -1))
+        .filter((i) => i >= 0);
+  
+      if (approvedIdxs.length === 0) return alert('Belum ada request yang disetujui admin');
+  
+      if (!(window as any).ethereum) return alert('Wallet belum terhubung');
+      const browserProvider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer = await browserProvider.getSigner();
+      const contract = new Contract(id, CAMPAIGN_ABI, signer);
+  
+      // saldo kontrak (opsional, buat info UX)
+      const bal = await (signer.provider as ethers.Provider).getBalance(id);
+  
+      // pilih index Approved yang lolos preflight
+      let chosen: bigint | null = null;
+      for (const i of approvedIdxs) {
+        const idx = BigInt(i);
         try {
-          const iface = new ethers.Interface(['function withdraw(uint256)']);
-          const data = iface.encodeFunctionData('withdraw', [idx]);
-          await (signer.provider as ethers.Provider).call({ to: id, data });
+          await (contract as any).executeWithdraw.staticCall(idx);
           chosen = idx;
           break;
-        } catch (raw) {
-          console.warn(`Index ${i} gagal preflight:`, raw);
+        } catch (e) {
+          try {
+            const iface = new ethers.Interface(['function executeWithdraw(uint256)']);
+            const data = iface.encodeFunctionData('executeWithdraw', [idx]);
+            await (signer.provider as ethers.Provider).call({ to: id, data });
+            chosen = idx;
+            break;
+          } catch (raw) {
+            // lanjut cek index berikutnya
+          }
         }
       }
+  
+      if (chosen === null) {
+        // info tambahan (opsional)
+        const maxNeed = approvedIdxs
+          .map((i) => ethers.parseEther(withdrawals[i].amount))
+          .reduce((a, b) => (a > b ? a : b), BigInt(0));
+        return alert(
+          `Tidak ada request Approved yang bisa dieksekusi sekarang. Cek saldo/aturan kontrak.\n` +
+          `Saldo kontrak: ${ethers.formatEther(bal)} STT • Kebutuhan tertinggi: ${ethers.formatEther(maxNeed)} STT`
+        );
+      }
+  
+      // kirim tx benerannya
+      const tx = await (contract as any).executeWithdraw(chosen);
+      await tx.wait();
+      alert('Withdraw berhasil!');
+      window.location.reload();
+    } catch (err: any) {
+      console.error('RAW REVERT (withdraw) >>>', err);
+      alert('Withdraw gagal: ' + errText(err));
     }
-
-    if (chosen === null) {
-      // kasih info tambahan: apakah saldo memang kurang?
-      const approvedNeed = approvedIdxs
-        .map((i) => ethers.parseEther(withdrawals[i].amount))
-        .reduce((a, b) => (a > b ? a : b),);
-      const balEth = ethers.formatEther(bal);
-      const needEth = ethers.formatEther(approvedNeed);
-      return alert(`Tidak ada request Approved yang bisa dieksekusi sekarang. Cek saldo/aturan kontrak.\nSaldo kontrak: ${balEth} STT • Kebutuhan tertinggi: ${needEth} STT`);
-    }
-
-    // 3) Kirim transaksi
-    const tx = await (contract as any).withdraw(chosen);
-    await tx.wait();
-    alert('Withdraw berhasil!');
-    window.location.reload();
-  } catch (err: any) {
-    console.error('RAW REVERT (withdraw) >>>', err);
-    // pakai formatter error yang lengkap (kalau kamu sudah menambahkan errText di file ini, pakai itu)
-    alert('Withdraw gagal: ' + (err?.info?.error?.message || err?.shortMessage || err?.reason || err?.message || 'Unknown error'));
   }
-}
+  
 
 
   
