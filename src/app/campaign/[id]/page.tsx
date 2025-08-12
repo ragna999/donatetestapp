@@ -97,6 +97,42 @@ export default function CampaignDetailPage() {
 
   const provider = useMemo(() => new ethers.JsonRpcProvider(RPC), []);
 
+
+  //helper//
+
+  function errText(err: any): string {
+    const nested =
+      err?.info?.error?.message ||
+      err?.data?.message ||
+      err?.cause?.message ||
+      err?.shortMessage ||
+      err?.reason ||
+      err?.message;
+  
+    // coba ekstrak dari body JSON RPC
+    try {
+      const body = err?.body || err?.info?.error?.body;
+      if (typeof body === 'string' && body.startsWith('{')) {
+        const j = JSON.parse(body);
+        const m = j?.error?.message || j?.message;
+        if (m) return m;
+      }
+    } catch {}
+  
+    // decode Error(string) selector 0x08c379a0
+    try {
+      const data: string | undefined = err?.info?.error?.data || err?.data || err?.error?.data;
+      if (typeof data === 'string' && data.startsWith('0x08c379a0')) {
+        const abi = ethers.AbiCoder.defaultAbiCoder();
+        const [msg] = abi.decode(['string'], '0x' + data.slice(10));
+        if (msg) return String(msg);
+      }
+    } catch {}
+  
+    return nested || String(err || 'Unknown error');
+  }
+
+  
   useEffect(() => {
     (async () => {
       try {
@@ -261,21 +297,45 @@ export default function CampaignDetailPage() {
     try {
       const approvedIndex = withdrawals.findIndex((w) => w.status === 1);
       if (approvedIndex === -1) return alert('Belum ada request yang disetujui admin');
-
+  
       if (!(window as any).ethereum) return alert('Wallet belum terhubung');
       const browserProvider = new ethers.BrowserProvider((window as any).ethereum);
       const signer = await browserProvider.getSigner();
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
-
-      const tx = await contract.withdraw(approvedIndex);
-      await tx.wait();
-      alert('Withdraw berhasil!');
-      window.location.reload();
+  
+      const idx = BigInt(approvedIndex);
+  
+      // Preflight 1: staticCall (kalau revert, sering “coalesce”)
+      try {
+        await (contract as any).withdraw.staticCall(idx);
+      } catch (e) {
+        // Preflight 2: manual provider.call biar dapat data revert mentah
+        try {
+          const iface = new ethers.Interface(['function withdraw(uint256)']);
+          const data = iface.encodeFunctionData('withdraw', [idx]);
+          await (signer.provider as ethers.Provider).call({ to: id, data });
+        } catch (raw) {
+          console.error('RAW REVERT (preflight withdraw) >>>', raw);
+          return alert('Withdraw gagal: ' + errText(raw));
+        }
+      }
+  
+      // Kirim transaksi benerannya
+      try {
+        const tx = await (contract as any).withdraw(idx);
+        await tx.wait();
+        alert('Withdraw berhasil!');
+        window.location.reload();
+      } catch (sendErr) {
+        console.error('RAW REVERT (send withdraw) >>>', sendErr);
+        alert('Withdraw gagal: ' + errText(sendErr));
+      }
     } catch (err: any) {
       console.error('❌ Withdraw gagal:', err);
-      alert(`Withdraw gagal: ${err?.shortMessage || err?.reason || err?.message || 'Unknown error'}`);
+      alert('Withdraw gagal: ' + errText(err));
     }
   }
+  
 
   if (!ready || !data) {
     return <p className="p-6 text-white">Loading campaign...</p>;
