@@ -1,4 +1,4 @@
-// Final FIXED CampaignDetailPage.tsx — with Withdrawn status & history section
+// Final FIXED CampaignDetailPage.tsx — status 2: Withdrawn vs Denied + Withdraw History
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -50,7 +50,7 @@ const CAMPAIGN_ABI = [
     ]
   },
 
-  // Create request — kontrak: requestWithdraw(uint amount, string reason)
+  // Create request — requestWithdraw(uint amount, string reason)
   {
     name: 'requestWithdraw',
     type: 'function',
@@ -62,7 +62,7 @@ const CAMPAIGN_ABI = [
     outputs: []
   },
 
-  // Execute withdraw di kontrak: executeWithdraw(uint256)
+  // Execute withdraw — executeWithdraw(uint256)
   {
     name: 'executeWithdraw',
     type: 'function',
@@ -95,7 +95,7 @@ export default function CampaignDetailPage() {
 
   const provider = useMemo(() => new ethers.JsonRpcProvider(RPC), []);
 
-  // ===== helper: error text (decode Error(string) + nested JSON-RPC) =====
+  // ===== helper: error text =====
   function errText(err: any): string {
     const nested =
       err?.info?.error?.message ||
@@ -348,19 +348,19 @@ export default function CampaignDetailPage() {
 
   const hasApproved = withdrawals.some((w) => w.status === 1);
 
-  // ===== NEW: status label & withdrawn history =====
+  // ===== status label & withdrawn history =====
   function statusLabel(r: WithdrawRow) {
     if (r.status === 0) return { text: '🟡 Pending',  cls: 'text-yellow-400' };
     if (r.status === 1) return { text: '✅ Approved', cls: 'text-green-400' };
-    // status === 2 → finalized.
-    // Heuristik: banyak kontrak nge-zero-in amount setelah execute → anggap Withdrawn kalau amount==0
+    // status === 2 → Finalized.
+    // Bedakan Withdrawn vs Denied pakai amount==0 (heuristik aman untuk kontrak lo).
     if (Number(r.amount) === 0) return { text: '💸 Withdrawn', cls: 'text-blue-400' };
-    return { text: '📦 Completed', cls: 'text-blue-400' }; // fallback kalau kontrak tidak zero-in amount
+    return { text: '❌ Denied', cls: 'text-red-400' };
   }
 
   const withdrawnHistory = withdrawals
     .map((r, i) => ({ ...r, index: i }))
-    .filter((r) => r.status === 2);
+    .filter((r) => r.status === 2 && Number(r.amount) === 0); // hanya yang benar2 Withdrawn
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
@@ -512,24 +512,21 @@ export default function CampaignDetailPage() {
           )}
         </ul>
 
-        {/* NEW: Riwayat Withdraw (finalized) */}
+        {/* Riwayat Withdraw — hanya yang finalized & amount==0 */}
         {withdrawnHistory.length > 0 && (
           <div className="mt-8">
             <h3 className="text-lg font-semibold mb-3">📚 Riwayat Withdraw</h3>
             <ul className="space-y-3">
-              {withdrawnHistory.map((r) => {
-                const withdrawn = Number(r.amount) === 0;
-                return (
-                  <li key={`wd-${r.index}`} className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-sm">
-                    <div className="text-white font-semibold">
-                      💸 {withdrawn ? 'Withdrawn' : 'Completed'} — <span className="text-gray-400 italic">{r.reason}</span>
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      ID: #{r.index} • {new Date(r.timestamp * 1000).toLocaleString()}
-                    </div>
-                  </li>
-                );
-              })}
+              {withdrawnHistory.map((r) => (
+                <li key={`wd-${r.index}`} className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-sm">
+                  <div className="text-white font-semibold">
+                    💸 Withdrawn — <span className="text-gray-400 italic">{r.reason}</span>
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    ID: #{r.index} • {new Date(r.timestamp * 1000).toLocaleString()}
+                  </div>
+                </li>
+              ))}
             </ul>
           </div>
         )}
