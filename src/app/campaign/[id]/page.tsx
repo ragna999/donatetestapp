@@ -109,7 +109,6 @@ export default function CampaignDetailPage() {
       err?.reason ||
       err?.message;
   
-    // coba ekstrak dari body JSON RPC
     try {
       const body = err?.body || err?.info?.error?.body;
       if (typeof body === 'string' && body.startsWith('{')) {
@@ -119,7 +118,6 @@ export default function CampaignDetailPage() {
       }
     } catch {}
   
-    // decode Error(string) selector 0x08c379a0
     try {
       const data: string | undefined = err?.info?.error?.data || err?.data || err?.error?.data;
       if (typeof data === 'string' && data.startsWith('0x08c379a0')) {
@@ -131,6 +129,7 @@ export default function CampaignDetailPage() {
   
     return nested || String(err || 'Unknown error');
   }
+  
 
   
   useEffect(() => {
@@ -303,13 +302,13 @@ export default function CampaignDetailPage() {
       const signer = await browserProvider.getSigner();
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
   
-      const idx = BigInt(approvedIndex);
+      const idx = BigInt(approvedIndex); // penting utk ethers v6
   
-      // Preflight 1: staticCall (kalau revert, sering “coalesce”)
+      // Preflight 1: staticCall (biar ketahuan bakal revert)
       try {
         await (contract as any).withdraw.staticCall(idx);
       } catch (e) {
-        // Preflight 2: manual provider.call biar dapat data revert mentah
+        // Preflight 2: manual provider.call biar dapet revert data mentah
         try {
           const iface = new ethers.Interface(['function withdraw(uint256)']);
           const data = iface.encodeFunctionData('withdraw', [idx]);
@@ -320,7 +319,7 @@ export default function CampaignDetailPage() {
         }
       }
   
-      // Kirim transaksi benerannya
+      // Eksekusi tx aslinya
       try {
         const tx = await (contract as any).withdraw(idx);
         await tx.wait();
@@ -335,6 +334,7 @@ export default function CampaignDetailPage() {
       alert('Withdraw gagal: ' + errText(err));
     }
   }
+  
   
 
   if (!ready || !data) {
