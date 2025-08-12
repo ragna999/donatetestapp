@@ -68,7 +68,7 @@ export default function AdminPage() {
 
   // ==== helpers ====
   function errText(err: any): string {
-    // 1) pesan nested dari ethers v6 / RPC
+    // jalur-jalur umum ethers v6
     const nested =
       err?.info?.error?.message ||
       err?.data?.message ||
@@ -76,19 +76,34 @@ export default function AdminPage() {
       err?.shortMessage ||
       err?.reason ||
       err?.message;
-
-    // 2) coba decode standar Error(string) = 0x08c379a0
+  
+    // kalau server ngasih body JSON, coba ekstrak
     try {
-      const data = err?.info?.error?.data || err?.data;
+      const body = err?.body || err?.info?.error?.body;
+      if (typeof body === 'string' && body.startsWith('{')) {
+        const j = JSON.parse(body);
+        const m = j?.error?.message || j?.message;
+        if (m) return m;
+      }
+    } catch {}
+  
+    // coba decode Error(string) selector: 0x08c379a0
+    try {
+      const data: string | undefined =
+        err?.info?.error?.data ||
+        err?.data ||
+        err?.error?.data;
+  
       if (typeof data === 'string' && data.startsWith('0x08c379a0')) {
         const abi = ethers.AbiCoder.defaultAbiCoder();
         const [msg] = abi.decode(['string'], '0x' + data.slice(10));
         if (msg) return String(msg);
       }
     } catch {}
-
+  
     return nested || String(err || 'Unknown error');
   }
+  
 
   async function getSigner() {
     const eth = (window as any).ethereum;
@@ -220,14 +235,10 @@ export default function AdminPage() {
   async function setWithdrawStatusTx(campaignAddr: string, index: number, approve: boolean) {
     const eth = (window as any).ethereum;
     if (!eth) throw new Error('Wallet tidak ditemukan');
-
+  
     const provider = new ethers.BrowserProvider(eth);
     const signer = await provider.getSigner();
-
-    // (opsional) guard: cek admin dulu supaya errornya jelas
-    await assertIsAdmin(campaignAddr, signer);
-
-    // ABI withdraw sesuai kontrak: approveWithdraw / denyWithdraw
+  
     const c = new Contract(
       campaignAddr,
       [
@@ -236,10 +247,10 @@ export default function AdminPage() {
       ] as const,
       signer
     );
-
-    const idx = BigInt(index); // ethers v6 prefer bigint
-
-    // Preflight: static call untuk munculin reason kalau bakal revert
+  
+    const idx = BigInt(index); // penting buat ethers v6
+  
+    // 1) Preflight biasa (staticCall)
     try {
       if (approve) {
         await (c as any).approveWithdraw.staticCall(idx);
@@ -247,20 +258,36 @@ export default function AdminPage() {
         await (c as any).denyWithdraw.staticCall(idx);
       }
     } catch (e) {
-      console.error('RAW ERROR >>>', e);
-      throw new Error(errText(e));
+      // 2) Preflight manual via provider.call biar dapet revert data mentah
+      try {
+        const iface = new ethers.Interface([
+          'function approveWithdraw(uint256)',
+          'function denyWithdraw(uint256)',
+        ]);
+        const data = approve
+          ? iface.encodeFunctionData('approveWithdraw', [idx])
+          : iface.encodeFunctionData('denyWithdraw', [idx]);
+  
+        // panggil node secara langsung; ini ga kirim tx, hanya simulasi
+        await (signer.provider as ethers.Provider).call({ to: campaignAddr, data });
+      } catch (raw) {
+        console.error('RAW REVERT (preflight) >>>', raw);
+        throw new Error(errText(raw));
+      }
     }
-
-    // Kirim tx benerannya
+  
+    // 3) Kirim tx benerannya
     try {
-      const tx = approve ? await (c as any).approveWithdraw(idx)
-                         : await (c as any).denyWithdraw(idx);
+      const tx = approve
+        ? await (c as any).approveWithdraw(idx)
+        : await (c as any).denyWithdraw(idx);
       await tx.wait();
-    } catch (e) {
-      console.error('RAW ERROR (send) >>>', e);
-      throw new Error(errText(e));
+    } catch (sendErr) {
+      console.error('RAW REVERT (send) >>>', sendErr);
+      throw new Error(errText(sendErr));
     }
   }
+  
 
   // ==== campaign actions ====
   const handleApproveCampaign = async (address: string): Promise<void> => {
