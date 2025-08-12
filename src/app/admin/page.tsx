@@ -18,7 +18,7 @@ const FACTORY_ABI = [
   { name: 'denyCampaign',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'address' }], outputs: [] },
 ] as const;
 
-// Minimal ABI untuk baca data + approve/deny langsung di campaign
+// Minimal ABI untuk baca data campaign
 const CAMPAIGN_ABI = [
   { name: 'title',    type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
   { name: 'image',    type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
@@ -35,9 +35,6 @@ const CAMPAIGN_ABI = [
       { name: 'status',    type: 'uint8'   }, // 0=Pending, 1=Approved, 2=Denied
     ],
   },
-  { name: 'approveWithdrawRequest', type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
-  { name: 'denyWithdrawRequest',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
-  { name: 'setWithdrawStatus',      type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }, { type: 'uint8' }], outputs: [] },
 ] as const;
 
 type PendingCampaign = {
@@ -72,7 +69,7 @@ export default function AdminPage() {
   // ==== helpers ====
   function errText(err: any): string {
     return (
-      err?.info?.error?.message ||
+      err?.info?.error?.message ||  // ethers v6 nested JSON-RPC
       err?.data?.message ||
       err?.cause?.message ||
       err?.shortMessage ||
@@ -81,12 +78,8 @@ export default function AdminPage() {
       String(err || 'Unknown error')
     );
   }
-  
-  
-  
-  
 
-  async function getSigner(): Promise<ethers.Signer> {
+  async function getSigner() {
     const eth = (window as any).ethereum;
     if (!eth) throw new Error('Wallet tidak ditemukan');
     const provider = new ethers.BrowserProvider(eth);
@@ -188,15 +181,15 @@ export default function AdminPage() {
     fetchPendingWithdraws();
   }, [authenticated]);
 
-  // ==== helper: set status withdraw (approve/deny) ====
-
+  // ==== helper: approve/deny withdraw di DonationCampaign (campaign-only) ====
   async function setWithdrawStatusTx(campaignAddr: string, index: number, approve: boolean) {
     const eth = (window as any).ethereum;
     if (!eth) throw new Error('Wallet tidak ditemukan');
-  
+
     const provider = new ethers.BrowserProvider(eth);
     const signer = await provider.getSigner();
-  
+
+    // ABI withdraw sesuai kontrakmu: approveWithdraw / denyWithdraw
     const c = new Contract(
       campaignAddr,
       [
@@ -205,8 +198,8 @@ export default function AdminPage() {
       ] as const,
       signer
     );
-  
-    // Preflight
+
+    // Preflight: static call untuk munculin reason kalau bakal revert
     try {
       if (approve) {
         await (c as any).approveWithdraw.staticCall(index);
@@ -216,8 +209,8 @@ export default function AdminPage() {
     } catch (e) {
       throw new Error(errText(e));
     }
-  
-    // Tx
+
+    // Kirim tx benerannya
     if (approve) {
       const tx = await (c as any).approveWithdraw(index);
       await tx.wait();
@@ -226,9 +219,6 @@ export default function AdminPage() {
       await tx.wait();
     }
   }
-  
-  
-  
 
   // ==== campaign actions ====
   const handleApproveCampaign = async (address: string): Promise<void> => {
@@ -239,8 +229,8 @@ export default function AdminPage() {
       alert('✅ Campaign disetujui');
       await fetchPendingCampaigns();
     } catch (e: any) {
-      alert('❌ Gagal approve withdraw: ' + errText(e));
-    }    
+      alert('❌ Gagal approve campaign: ' + errText(e));
+    }
   };
 
   const handleDenyCampaign = async (address: string): Promise<void> => {
@@ -255,7 +245,7 @@ export default function AdminPage() {
     }
   };
 
-  // ==== withdraw actions (pakai helper di atas; tidak ada duplikasi) ====
+  // ==== withdraw actions ====
   const handleApproveWithdraw = async (campaignAddr: string, index: number): Promise<void> => {
     try {
       await setWithdrawStatusTx(campaignAddr, index, true);
@@ -349,7 +339,7 @@ export default function AdminPage() {
             ) : pendingRequests.length === 0 ? (
               <p className="text-green-700">✅ Tidak ada request withdraw yang pending.</p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md-grid-cols-2 md:grid-cols-2 gap-6">
                 {pendingRequests.map((r, idx) => (
                   <div key={`${r.campaign}-${r.index}-${idx}`} className="bg-white rounded-xl shadow p-4 border">
                     <div className="text-xs text-gray-500 mb-1 font-mono truncate">{r.campaign}</div>
