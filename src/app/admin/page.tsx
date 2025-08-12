@@ -72,7 +72,7 @@ export default function AdminPage() {
   // ==== helpers ====
   function errText(err: any): string {
     return (
-      err?.info?.error?.message || // nested JSON-RPC (ethers v6)
+      err?.info?.error?.message ||  // ethers v6 nested JSON-RPC
       err?.data?.message ||
       err?.cause?.message ||
       err?.shortMessage ||
@@ -81,6 +81,8 @@ export default function AdminPage() {
       String(err || 'Unknown error')
     );
   }
+  
+  
   
 
   async function getSigner(): Promise<ethers.Signer> {
@@ -194,29 +196,37 @@ export default function AdminPage() {
     const provider = new ethers.BrowserProvider(eth);
     const signer = await provider.getSigner();
   
-    const c = new Contract(
-      campaignAddr,
-      [
-        { name: 'approveWithdrawRequest', type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
-        { name: 'denyWithdrawRequest',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
-        { name: 'setWithdrawStatus',      type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }, { type: 'uint8' }], outputs: [] },
-      ] as const,
-      signer
-    );
+    // ABI withdraw di DonationCampaign
+    const ABI = [
+      { name: 'approveWithdrawRequest', type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
+      { name: 'denyWithdrawRequest',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
+      { name: 'setWithdrawStatus',      type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }, { type: 'uint8' }], outputs: [] },
+    ] as const;
   
+    const c = new Contract(campaignAddr, ABI, signer);
+  
+    // Preflight: static call buat nampilin reason kalau bakal revert
     try {
-      const tx = approve
-        ? await (c as any).approveWithdrawRequest(index)
-        : await (c as any).denyWithdrawRequest(index);
-      await tx.wait();
-      return;
+      if (approve) {
+        await (c as any).approveWithdrawRequest.staticCall(index);
+      } else {
+        await (c as any).denyWithdrawRequest.staticCall(index);
+      }
     } catch (e) {
-      // fallback terakhir
-      const status = approve ? 1 : 2; // 1=Approved, 2=Denied
-      const tx2 = await (c as any).setWithdrawStatus(index, status);
-      await tx2.wait();
+      throw new Error(errText(e));
+    }
+  
+    // Kirim tx benerannya
+    if (approve) {
+      const tx = await (c as any).approveWithdrawRequest(index);
+      await tx.wait();
+    } else {
+      const tx = await (c as any).denyWithdrawRequest(index);
+      await tx.wait();
     }
   }
+  
+  
   
 
   // ==== campaign actions ====
