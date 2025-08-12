@@ -237,9 +237,9 @@ export default function AdminPage() {
       await safeTx(factory.approveCampaign(address));
       alert('✅ Campaign disetujui');
       await fetchPendingCampaigns();
-    } catch (e) {
-      alert('❌ Gagal approve campaign: ' + errText(e));
-    }
+    } catch (e: any) {
+      alert('❌ Gagal approve withdraw: ' + errText(e));
+    }    
   };
 
   const handleDenyCampaign = async (address: string): Promise<void> => {
@@ -249,7 +249,7 @@ export default function AdminPage() {
       await safeTx(factory.denyCampaign(address));
       alert('⛔ Campaign ditolak');
       await fetchPendingCampaigns();
-    } catch (e) {
+    } catch (e: any) {
       alert('❌ Gagal menolak campaign: ' + errText(e));
     }
   };
