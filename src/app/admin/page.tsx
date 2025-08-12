@@ -68,15 +68,26 @@ export default function AdminPage() {
 
   // ==== helpers ====
   function errText(err: any): string {
-    return (
-      err?.info?.error?.message ||  // ethers v6 nested JSON-RPC
+    // 1) pesan nested dari ethers v6 / RPC
+    const nested =
+      err?.info?.error?.message ||
       err?.data?.message ||
       err?.cause?.message ||
       err?.shortMessage ||
       err?.reason ||
-      err?.message ||
-      String(err || 'Unknown error')
-    );
+      err?.message;
+
+    // 2) coba decode standar Error(string) = 0x08c379a0
+    try {
+      const data = err?.info?.error?.data || err?.data;
+      if (typeof data === 'string' && data.startsWith('0x08c379a0')) {
+        const abi = ethers.AbiCoder.defaultAbiCoder();
+        const [msg] = abi.decode(['string'], '0x' + data.slice(10));
+        if (msg) return String(msg);
+      }
+    } catch {}
+
+    return nested || String(err || 'Unknown error');
   }
 
   async function getSigner() {
@@ -181,6 +192,30 @@ export default function AdminPage() {
     fetchPendingWithdraws();
   }, [authenticated]);
 
+  // ==== helper: (opsional) cek admin lewat AdminManager di campaign ====
+  async function assertIsAdmin(campaignAddr: string, signer: ethers.Signer) {
+    try {
+      const c = new Contract(
+        campaignAddr,
+        [{ name: 'adminContract', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] }],
+        signer
+      );
+      const adminAddr: string = await (c as any).adminContract();
+      if (!adminAddr || adminAddr === ethers.ZeroAddress) return; // kalau ga ada adminContract, skip
+
+      const iam = new Contract(
+        adminAddr,
+        [{ name: 'isAdmin', type: 'function', stateMutability: 'view', inputs: [{ type: 'address' }], outputs: [{ type: 'bool' }] }],
+        signer
+      );
+      const me = await signer.getAddress();
+      const ok: boolean = await (iam as any).isAdmin(me);
+      if (!ok) throw new Error('Not admin');
+    } catch {
+      // kalau read gagal, biarin (akan ketahuan saat call utama)
+    }
+  }
+
   // ==== helper: approve/deny withdraw di DonationCampaign (campaign-only) ====
   async function setWithdrawStatusTx(campaignAddr: string, index: number, approve: boolean) {
     const eth = (window as any).ethereum;
@@ -189,7 +224,10 @@ export default function AdminPage() {
     const provider = new ethers.BrowserProvider(eth);
     const signer = await provider.getSigner();
 
-    // ABI withdraw sesuai kontrakmu: approveWithdraw / denyWithdraw
+    // (opsional) guard: cek admin dulu supaya errornya jelas
+    await assertIsAdmin(campaignAddr, signer);
+
+    // ABI withdraw sesuai kontrak: approveWithdraw / denyWithdraw
     const c = new Contract(
       campaignAddr,
       [
@@ -199,24 +237,28 @@ export default function AdminPage() {
       signer
     );
 
+    const idx = BigInt(index); // ethers v6 prefer bigint
+
     // Preflight: static call untuk munculin reason kalau bakal revert
     try {
       if (approve) {
-        await (c as any).approveWithdraw.staticCall(index);
+        await (c as any).approveWithdraw.staticCall(idx);
       } else {
-        await (c as any).denyWithdraw.staticCall(index);
+        await (c as any).denyWithdraw.staticCall(idx);
       }
     } catch (e) {
+      console.error('RAW ERROR >>>', e);
       throw new Error(errText(e));
     }
 
     // Kirim tx benerannya
-    if (approve) {
-      const tx = await (c as any).approveWithdraw(index);
+    try {
+      const tx = approve ? await (c as any).approveWithdraw(idx)
+                         : await (c as any).denyWithdraw(idx);
       await tx.wait();
-    } else {
-      const tx = await (c as any).denyWithdraw(index);
-      await tx.wait();
+    } catch (e) {
+      console.error('RAW ERROR (send) >>>', e);
+      throw new Error(errText(e));
     }
   }
 
@@ -339,7 +381,7 @@ export default function AdminPage() {
             ) : pendingRequests.length === 0 ? (
               <p className="text-green-700">✅ Tidak ada request withdraw yang pending.</p>
             ) : (
-              <div className="grid grid-cols-1 md-grid-cols-2 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {pendingRequests.map((r, idx) => (
                   <div key={`${r.campaign}-${r.index}-${idx}`} className="bg-white rounded-xl shadow p-4 border">
                     <div className="text-xs text-gray-500 mb-1 font-mono truncate">{r.campaign}</div>
