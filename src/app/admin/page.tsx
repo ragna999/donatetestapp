@@ -81,6 +81,7 @@ export default function AdminPage() {
       String(err || 'Unknown error')
     );
   }
+  
 
   async function getSigner(): Promise<ethers.Signer> {
     const eth = (window as any).ethereum;
@@ -185,14 +186,14 @@ export default function AdminPage() {
   }, [authenticated]);
 
   // ==== helper: set status withdraw (approve/deny) ====
-  // NOTE: Bypass Factory; langsung ke DonationCampaign untuk hindari "could not coalesce error"
+
   async function setWithdrawStatusTx(campaignAddr: string, index: number, approve: boolean) {
     const eth = (window as any).ethereum;
     if (!eth) throw new Error('Wallet tidak ditemukan');
-
+  
     const provider = new ethers.BrowserProvider(eth);
     const signer = await provider.getSigner();
-
+  
     const c = new Contract(
       campaignAddr,
       [
@@ -202,25 +203,21 @@ export default function AdminPage() {
       ] as const,
       signer
     );
-
-    // Coba path khusus dulu (approve/deny), lalu fallback ke setter langsung
+  
     try {
-      if (approve) {
-        const tx = await (c as any).approveWithdrawRequest(index);
-        await tx.wait();
-      } else {
-        const tx = await (c as any).denyWithdrawRequest(index);
-        await tx.wait();
-      }
-      return;
-    } catch (e) {
-      // fallback ke setter langsung (1 = Approved, 2 = Denied)
-      const status = approve ? 1 : 2;
-      const tx = await (c as any).setWithdrawStatus(index, status);
+      const tx = approve
+        ? await (c as any).approveWithdrawRequest(index)
+        : await (c as any).denyWithdrawRequest(index);
       await tx.wait();
       return;
+    } catch (e) {
+      // fallback terakhir
+      const status = approve ? 1 : 2; // 1=Approved, 2=Denied
+      const tx2 = await (c as any).setWithdrawStatus(index, status);
+      await tx2.wait();
     }
   }
+  
 
   // ==== campaign actions ====
   const handleApproveCampaign = async (address: string): Promise<void> => {
