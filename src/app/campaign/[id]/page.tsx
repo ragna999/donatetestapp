@@ -200,42 +200,47 @@ export default function CampaignDetailPage() {
         setWithdrawals(reqs);
 
         // ==== HYDRATE executed / denied dari event on-chain (pakai contract.filters v6) ====
-        try {
-          const c = new Contract(id, CAMPAIGN_ABI, provider);
+        // ==== HYDRATE executed / denied dari event on-chain (robust via topics) ====
+try {
+  const c = new Contract(id, CAMPAIGN_ABI, provider);
 
-          // Bisa undefined kalau event gak ada di ABI (aman)
-          const fExec   = (c as any).filters?.WithdrawExecuted?.();
-          const fDenied = (c as any).filters?.WithdrawDenied?.();
+  // Signature topic (non-indexed arg → nilai ada di log.data)
+  const topicExec   = ethers.id('WithdrawExecuted(uint256)');
+  const topicDenied = ethers.id('WithdrawDenied(uint256)');
 
-          const logsExec   = fExec   ? await provider.getLogs({ ...fExec,   fromBlock: BigInt(140908639), toBlock: 'latest' }) : [];
-          const logsDenied = fDenied ? await provider.getLogs({ ...fDenied, fromBlock: BigInt(140908639), toBlock: 'latest' }) : [];
+  const [logsExec, logsDenied] = await Promise.all([
+    provider.getLogs({ address: id, topics: [topicExec],   fromBlock: BigInt(0), toBlock: 'latest' }),
+    provider.getLogs({ address: id, topics: [topicDenied], fromBlock: BigInt(0), toBlock: 'latest' }),
+  ]);
 
-          const execSet = new Set<number>();
-          for (const lg of logsExec) {
-            try {
-              const parsed = c.interface.parseLog(lg);
-              const wid = Number(parsed?.args?.id);
-              if (!Number.isNaN(wid)) execSet.add(wid);
-            } catch {}
-          }
+  const execSet = new Set<number>();
+  for (const lg of logsExec) {
+    try {
+      // non-indexed -> id ada di data
+      const [wid] = ethers.AbiCoder.defaultAbiCoder().decode(['uint256'], lg.data);
+      const n = Number(wid);
+      if (!Number.isNaN(n)) execSet.add(n);
+    } catch {}
+  }
 
-          const denySet = new Set<number>();
-          for (const lg of logsDenied) {
-            try {
-              const parsed = c.interface.parseLog(lg);
-              const wid = Number(parsed?.args?.id);
-              if (!Number.isNaN(wid)) denySet.add(wid);
-            } catch {}
-          }
+  const denySet = new Set<number>();
+  for (const lg of logsDenied) {
+    try {
+      const [wid] = ethers.AbiCoder.defaultAbiCoder().decode(['uint256'], lg.data);
+      const n = Number(wid);
+      if (!Number.isNaN(n)) denySet.add(n);
+    } catch {}
+  }
 
-          const finalExec = execSet.size > 0 ? execSet : loadExecutedLS(id);
-          setExecutedIds(finalExec);
-          setDeniedIds(denySet);
-        } catch {
-          // provider.getLogs error → fallback LS supaya yang barusan dieksekusi tetep kebaca
-          setExecutedIds(loadExecutedLS(id));
-          setDeniedIds(new Set());
-        }
+  const finalExec = execSet.size > 0 ? execSet : loadExecutedLS(id);
+  setExecutedIds(finalExec);
+  setDeniedIds(denySet);
+} catch {
+  // fallback LS supaya yang barusan dieksekusi tetep kebaca
+  setExecutedIds(loadExecutedLS(id));
+  setDeniedIds(new Set());
+}
+
 
         // set base data
         setData({
@@ -388,20 +393,20 @@ export default function CampaignDetailPage() {
   // ===== Label & History (events/LS) =====
   const isWithdrawn = (i: number) => executedIds.has(i);
   const isDeniedByAdmin = (i: number) => deniedIds.has(i);
-
+  
   function statusLabel(i: number, r: WithdrawRow) {
     if (r.status === 0) return { text: '🟡 Pending',  cls: 'text-yellow-400' };
     if (r.status === 1) return { text: '✅ Approved', cls: 'text-green-400' };
-    // status 2 (kontrak set ke Denied saat execute untuk cegah re-entrancy)
+    // status=2 digunakan baik oleh Denied (admin) maupun Executed (anti re-entrancy).
     if (isWithdrawn(i)) return { text: '💸 Withdrawn', cls: 'text-blue-400' };
     if (isDeniedByAdmin(i) || r.status === 2) return { text: '❌ Denied', cls: 'text-red-400' };
     return { text: '❓ Unknown', cls: 'text-gray-300' };
   }
-
+  
   const withdrawnHistory = withdrawals
     .map((r, i) => ({ ...r, index: i }))
     .filter((r) => executedIds.has(r.index));
-
+  
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
       {data.image ? (
