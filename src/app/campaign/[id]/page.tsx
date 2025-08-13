@@ -510,28 +510,33 @@ try {
 
 
 // ===== Label & History =====
+// ===== Label & History (events/LS) =====
 const isWithdrawn = (i: number) => executedIds.has(i);
 const isDeniedByAdmin = (i: number) => deniedIds.has(i);
 
+// Aturan:
+//  - 0 => Pending
+//  - 1 => Approved
+//  - 2 => Entah Executed (cair) atau Denied. Default-kan ke Withdrawn
+//       KECUALI ada event Denied untuk index tsb.
 function statusLabel(i: number, r: WithdrawRow) {
   if (r.status === 0) return { text: '🟡 Pending',  cls: 'text-yellow-400' };
   if (r.status === 1) return { text: '✅ Approved', cls: 'text-green-400' };
 
-  // Finalized (status=2 di chain kamu):
-  if (isDeniedByAdmin(i)) return { text: '❌ Denied',    cls: 'text-red-400' };
-  if (isWithdrawn(i))     return { text: '⛔ Finalized', cls: 'text-orange-300' };
+  // status === 2:
+  if (isDeniedByAdmin(i)) return { text: '❌ Denied', cls: 'text-red-400' };
+  // kalau ada bukti executed → withdrawn (nice), kalau belum ada bukti event pun
+  // anggap Withdrawn supaya tidak nyangkut "finalized"
+  if (isWithdrawn(i) || r.status === 2) return { text: '💸 Withdrawn', cls: 'text-blue-400' };
 
-  // Kalau belum kebaca event/heuristik apa-apa, tetap tampil Finalized netral
-  return { text: '⛔ Finalized', cls: 'text-orange-300' };
+  return { text: '❓ Unknown', cls: 'text-gray-300' };
 }
 
-
-
-
-// Riwayat withdraw: hanya yang benar-benar executed
+// Riwayat withdraw: tampilkan yang benar-benar executed ATAU
+// semua status=2 yang tidak punya event Denied.
 const withdrawnHistory = withdrawals
   .map((r, i) => ({ ...r, index: i }))
-  .filter((r) => isWithdrawn(r.index));
+  .filter((r) => isWithdrawn(r.index) || (r.status === 2 && !isDeniedByAdmin(r.index)));
 
 
   return (
