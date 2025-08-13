@@ -199,35 +199,46 @@ export default function CampaignDetailPage() {
         }
         setWithdrawals(reqs);
 
-        // ==== HYDRATE executed / denied dari event on-chain (pakai contract.filters v6) ====
-       // ==== HYDRATE executed / denied dari event on-chain (robust topics + decode) ====
+// ==== HYDRATE executed / denied dari event on-chain (windowed getLogs + robust decode) ====
 try {
   const c = new Contract(id, CAMPAIGN_ABI, provider);
-  
+
+  // Topic hash (ethers v6)
   const topicExec   = ethers.id('WithdrawExecuted(uint256)');
   const topicDenied = ethers.id('WithdrawDenied(uint256)');
 
-  const base = { address: id, fromBlock: 0 as number, toBlock: 'latest' as const };
+  // windowed scan to avoid RPC range limits
+  async function scanLogsByTopic(topic: string) {
+    const latest = await provider.getBlockNumber();
+    const STEP = 50_000; // sesuaikan kalau RPC protes
+    const acc: any[] = [];
 
-  // Coba single-topic; kalau kosong, coba bentuk [topic, null] (untuk indexed arg)
-  let logsExec = await provider.getLogs({ ...base, topics: [topicExec] });
-  if (logsExec.length === 0) {
-    logsExec = await provider.getLogs({ ...base, topics: [topicExec, null] });
-  }
-  let logsDenied = await provider.getLogs({ ...base, topics: [topicDenied] });
-  if (logsDenied.length === 0) {
-    logsDenied = await provider.getLogs({ ...base, topics: [topicDenied, null] });
+    // 1) non-indexed form: topics: [topic]
+    for (let from = 0; from <= latest; from += STEP + 1) {
+      const to = Math.min(latest, from + STEP);
+      const logs = await provider.getLogs({ address: id, topics: [topic], fromBlock: from, toBlock: to });
+      if (logs.length) acc.push(...logs);
+    }
+    // 2) indexed form: topics: [topic, null]  (kalau event 'id' ternyata indexed)
+    if (acc.length === 0) {
+      for (let from = 0; from <= latest; from += STEP + 1) {
+        const to = Math.min(latest, from + STEP);
+        const logs = await provider.getLogs({ address: id, topics: [topic, null], fromBlock: from, toBlock: to });
+        if (logs.length) acc.push(...logs);
+      }
+    }
+    return acc;
   }
 
   function readIdFromLog(lg: any): number | null {
     try {
-      // 1) non-indexed → ada di data
+      // non-indexed → ada di data
       if (lg.data && lg.data !== '0x') {
         const [wid] = ethers.AbiCoder.defaultAbiCoder().decode(['uint256'], lg.data);
         const n = Number(wid);
         return Number.isNaN(n) ? null : n;
       }
-      // 2) indexed → ada di topics[1]
+      // indexed → ada di topics[1]
       if (Array.isArray(lg.topics) && lg.topics.length > 1) {
         const n = Number(BigInt(lg.topics[1]));
         return Number.isNaN(n) ? null : n;
@@ -235,6 +246,11 @@ try {
     } catch {}
     return null;
   }
+
+  const [logsExec, logsDenied] = await Promise.all([
+    scanLogsByTopic(topicExec),
+    scanLogsByTopic(topicDenied),
+  ]);
 
   const execSet = new Set<number>();
   for (const lg of logsExec) {
@@ -256,6 +272,7 @@ try {
   setExecutedIds(loadExecutedLS(id));
   setDeniedIds(new Set());
 }
+
 
 
 
