@@ -199,7 +199,6 @@ export default function CampaignDetailPage() {
         }
         setWithdrawals(reqs);
 
-// === Disambiguate status=2 tanpa event: staticCall executeWithdraw ===
 // === Disambiguate status=2 tanpa event: staticCall executeWithdraw (pakai REQS lokal)
 async function classifyFinalizedRequests(
   reqs: WithdrawRow[],
@@ -217,7 +216,7 @@ async function classifyFinalizedRequests(
 
     try {
       await (c as any).executeWithdraw.staticCall(i);
-      // jika tidak revert → ambiguous (biarkan tidak dilabel)
+      // jika tidak revert → ambiguous, biarkan
     } catch (e: any) {
       const msg = (typeof errText === 'function' ? errText(e) : (e?.reason || e?.message || '')).toLowerCase();
       if (msg.includes('denied') || msg.includes('not approved') || msg.includes('rejected')) {
@@ -225,24 +224,21 @@ async function classifyFinalizedRequests(
       } else if (msg.includes('already executed') || msg.includes('executed')) {
         execSet.add(i);
       } else {
-        // fallback low-level call untuk reason lain
         try {
           const iface = new ethers.Interface(['function executeWithdraw(uint256)']);
           const data = iface.encodeFunctionData('executeWithdraw', [i]);
           await provider.call({ to: id, data }); // expect revert
         } catch (e2: any) {
           const m2 = (typeof errText === 'function' ? errText(e2) : (e2?.reason || e2?.message || '')).toLowerCase();
-          if (m2.includes('denied') || m2.includes('not approved') || m2.includes('rejected')) {
-            denySet.add(i);
-          } else if (m2.includes('already executed') || m2.includes('executed')) {
-            execSet.add(i);
-          }
+          if (m2.includes('denied') || m2.includes('not approved') || m2.includes('rejected')) denySet.add(i);
+          else if (m2.includes('already executed') || m2.includes('executed')) execSet.add(i);
         }
       }
     }
   }
   return { execSet, denySet };
 }
+
 
 // ==== HYDRATE executed / denied (windowed getLogs + robust decode) ====
 try {
@@ -271,6 +267,7 @@ try {
       }
     }
     return acc;
+    
   }
 
   function readIdFromLog(lg: any): number | null {
@@ -308,6 +305,9 @@ try {
   const finalExec = execSet.size > 0 ? execSet : loadExecutedLS(id);
   setExecutedIds(finalExec);
   setDeniedIds(denySet);
+
+  console.log('exec logs size', execSet.size, 'deny logs size', denySet.size);
+
 } catch {
   setExecutedIds(loadExecutedLS(id));
   setDeniedIds(new Set());
@@ -467,20 +467,18 @@ const isWithdrawn = (i: number) => executedIds.has(i);
 const isDeniedByAdmin = (i: number) => deniedIds.has(i);
 
 function statusLabel(i: number, r: WithdrawRow) {
-  // Pending & Approved apa adanya
   if (r.status === 0) return { text: '🟡 Pending',  cls: 'text-yellow-400' };
   if (r.status === 1) return { text: '✅ Approved', cls: 'text-green-400' };
 
-  // Finalized (status=2 di chain kamu)
-  // 1) Kalau ketemu di deniedIds → Denied
+  // Finalized (status=2 di chain kamu):
+  // 1) Ada bukti Denied → Denied
   if (isDeniedByAdmin(i)) return { text: '❌ Denied', cls: 'text-red-400' };
-
-  // 2) Kalau ketemu di executedIds → dianggap Approved (karena wd sukses)
+  // 2) Ada bukti Executed → tampilkan sebagai Approved (sesuai keinginan lo)
   if (isWithdrawn(i))     return { text: '✅ Approved', cls: 'text-green-400' };
-
-  // 3) Sisanya (gak kebaca event) → tampil netral dulu
+  // 3) Belum jelas → Finalized (sementara)
   return { text: '⛔ Finalized', cls: 'text-orange-300' };
 }
+
 
 
 // Riwayat withdraw: hanya yang benar-benar executed
