@@ -240,56 +240,119 @@ async function classifyFinalizedRequests(
 }
 
 
-// ==== HYDRATE executed / denied (windowed getLogs + robust decode) ====
-// ==== HYDRATE executed / denied (windowed getLogs + parseLog, tanpa topics) ====
+// ==== HYDRATE executed / denied (windowed; campaign + factory-style) ====
 try {
   const c = new Contract(id, CAMPAIGN_ABI, provider);
-  const iface = new ethers.Interface(CAMPAIGN_ABI as any);
 
-  async function scanAllLogs() {
+  // 1) Topik utk event versi "campaign emits (uint256)"
+  const topicExecV1   = ethers.id('WithdrawExecuted(uint256)');
+  const topicDeniedV1 = ethers.id('WithdrawDenied(uint256)');
+
+  // 2) Topik utk event versi "factory emits (address campaign, uint256 id)"
+  const topicExecV2   = ethers.id('WithdrawExecuted(address,uint256)');
+  const topicDeniedV2 = ethers.id('WithdrawDenied(address,uint256)');
+
+  // helper: pad address → topic form (0x000...<20byte address>)
+  const addrToTopic = (addr: string) =>
+    '0x' + '0'.repeat(24) + addr.toLowerCase().replace(/^0x/, '');
+
+  // windowed scan
+  async function scanLogs(filter: any) {
     const latest = await provider.getBlockNumber();
-    const STEP = 50000;         // jaga-jaga limit RPC
-    const acc: any[] = [];
+    const STEP = 50000;
+    const out: any[] = [];
     for (let from = 0; from <= latest; from += STEP + 1) {
       const to = Math.min(latest, from + STEP);
-      const logs = await provider.getLogs({ address: id, fromBlock: from, toBlock: to });
-      if (logs.length) acc.push(...logs);
+      const logs = await provider.getLogs({ ...filter, fromBlock: from, toBlock: to });
+      if (logs.length) out.push(...logs);
     }
-    return acc;
+    return out;
   }
 
-  const logs = await scanAllLogs();
-
-  const execSet = new Set<number>();
-  const denySet = new Set<number>();
-
-  for (const lg of logs) {
+  // baca id dari log (non-indexed di data, kalau indexed ambil topics[n])
+  function readUintId(lg: any, topicIndex: number | null): number | null {
     try {
-      const parsed = iface.parseLog(lg);
-      if (!parsed) continue;
+      if (topicIndex !== null && Array.isArray(lg.topics) && lg.topics.length > topicIndex) {
+        const n = Number(BigInt(lg.topics[topicIndex]));
+        return Number.isNaN(n) ? null : n;
+      }
+      if (lg.data && lg.data !== '0x') {
+        const [wid] = ethers.AbiCoder.defaultAbiCoder().decode(['uint256'], lg.data);
+        const n = Number(wid);
+        return Number.isNaN(n) ? null : n;
+      }
+    } catch {}
+    return null;
+  }
 
-      // Nama event sesuai ABI (apapun indexed/non-indexed & jumlah argumen)
-      if (parsed.name === 'WithdrawExecuted' || parsed.name === 'WithdrawDenied') {
-        // Ambil argumen 'id' dari parsed.args (aman utk indexed/non-indexed)
-        const wid = Number(parsed.args?.id);
-        if (!Number.isNaN(wid)) {
-          if (parsed.name === 'WithdrawExecuted') execSet.add(wid);
-          else denySet.add(wid);
+  // ===== scan versi V1: event keluar dari alamat campaign =====
+  const [logsExecV1, logsDeniedV1] = await Promise.all([
+    // non-indexed form (id di data)
+    scanLogs({ address: id, topics: [topicExecV1] }),
+    scanLogs({ address: id, topics: [topicDeniedV1] }),
+  ]);
+
+  // ===== scan versi V2: event keluar dari alamat lain (factory), indexed campaign addr =====
+  const campaignTopic = addrToTopic(id);
+  const [logsExecV2, logsDeniedV2] = await Promise.all([
+    // filter topics[1] = campaign address
+    scanLogs({ topics: [topicExecV2, campaignTopic] }),
+    scanLogs({ topics: [topicDeniedV2, campaignTopic] }),
+  ]);
+
+  // Kumpulkan semua log jadi satu
+  const allExecLogs = [...logsExecV1, ...logsExecV2];
+  const allDeniedLogs = [...logsDeniedV1, ...logsDeniedV2];
+
+  const execSetFromLogs = new Set<number>();
+  for (const lg of allExecLogs) {
+    // V1: id non-indexed → di data; V2: id kemungkinan indexed di topics[2] atau non-indexed di data
+    const n = readUintId(lg, lg.topics?.[0] === topicExecV2 ? 2 : null);
+    if (n !== null) execSetFromLogs.add(n);
+  }
+
+  const denySetFromLogs = new Set<number>();
+  for (const lg of allDeniedLogs) {
+    const n = readUintId(lg, lg.topics?.[0] === topicDeniedV2 ? 2 : null);
+    if (n !== null) denySetFromLogs.add(n);
+  }
+
+  // Fallback LS utk executed (kalau history lama nggak ketemu di RPC)
+  const baseExec = execSetFromLogs.size > 0 ? execSetFromLogs : loadExecutedLS(id);
+  const baseDeny = denySetFromLogs;
+
+  // (Opsional) perjelas pakai staticCall tanpa menghapus hasil logs
+  let finalExec = new Set(baseExec);
+  let finalDeny = new Set(baseDeny);
+  try {
+    const refined = await (async function refine(reqs: WithdrawRow[], baseExec: Set<number>, baseDeny: Set<number>) {
+      const c2 = new Contract(id, CAMPAIGN_ABI, provider);
+      const e = new Set(baseExec);
+      const d = new Set(baseDeny);
+      for (let i = 0; i < reqs.length; i++) {
+        const r = reqs[i];
+        if (r.status !== 2) continue;
+        if (e.has(i) || d.has(i)) continue;
+        try {
+          await (c2 as any).executeWithdraw.staticCall(i);
+          // jika nggak revert → ambiguous, biarkan
+        } catch (err: any) {
+          const msg = (typeof errText === 'function' ? errText(err) : (err?.reason || err?.message || '')).toLowerCase();
+          if (msg.includes('denied') || msg.includes('not approved') || msg.includes('rejected')) d.add(i);
+          else if (msg.includes('already executed') || msg.includes('executed')) e.add(i);
         }
       }
-    } catch {
-      // log bukan event yang ada di ABI → skip
-    }
-  }
+      return { e, d };
+    })(reqs, baseExec, baseDeny);
 
-  // Fallback LS kalau event executed lama gak kebaca
-  const finalExec = execSet.size > 0 ? execSet : loadExecutedLS(id);
+    finalExec = refined.e;
+    finalDeny = refined.d;
+  } catch {}
 
   setExecutedIds(finalExec);
-  setDeniedIds(denySet);
+  setDeniedIds(finalDeny);
 
-  // Debug cepat
-  console.log('hydrated exec', finalExec.size, 'deny', denySet.size);
+  console.log('hydrated exec', finalExec.size, 'deny', finalDeny.size);
 } catch {
   setExecutedIds(loadExecutedLS(id));
   setDeniedIds(new Set());
