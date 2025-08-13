@@ -500,16 +500,13 @@ function statusLabel(i: number, r: WithdrawRow) {
   if (r.status === 0) return { text: '🟡 Pending',  cls: 'text-yellow-400' };
   if (r.status === 1) return { text: '✅ Approved', cls: 'text-green-400' };
 
-  // status=2 dipakai untuk *Executed* dan *Denied*.
-  // Prioritaskan Denied hanya jika *pasti* dideteksi dari event.
+  // Finalized:
   if (isDeniedByAdmin(i)) return { text: '❌ Denied', cls: 'text-red-400' };
-
-  // Jika tidak terdeteksi Denied, treat sebagai Withdrawn (executed),
-  // termasuk kasus executedIds atau fallback ketika logs tidak tersedia.
   if (isWithdrawn(i) || r.status === 2) return { text: '💸 Withdrawn', cls: 'text-blue-400' };
 
   return { text: '❓ Unknown', cls: 'text-gray-300' };
 }
+
 
   
 const withdrawnHistory = withdrawals
