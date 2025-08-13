@@ -1,4 +1,4 @@
-// Final FIXED CampaignDetailPage.tsx — status 2: Withdrawn vs Denied + Withdraw History
+// CampaignDetailPage.tsx — status 2: Withdrawn vs Denied (no contract redeploy)
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -19,7 +19,6 @@ const CAMPAIGN_ABI = [
   { name: 'deadline', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
   { name: 'social', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
 
-  // Donations
   {
     name: 'getDonations',
     type: 'function',
@@ -36,7 +35,6 @@ const CAMPAIGN_ABI = [
     ]
   },
 
-  // Withdraw requests array accessor: requests(uint)
   {
     name: 'requests',
     type: 'function',
@@ -50,7 +48,6 @@ const CAMPAIGN_ABI = [
     ]
   },
 
-  // Create request — requestWithdraw(uint amount, string reason)
   {
     name: 'requestWithdraw',
     type: 'function',
@@ -62,7 +59,6 @@ const CAMPAIGN_ABI = [
     outputs: []
   },
 
-  // Execute withdraw — executeWithdraw(uint256)
   {
     name: 'executeWithdraw',
     type: 'function',
@@ -71,7 +67,6 @@ const CAMPAIGN_ABI = [
     outputs: []
   },
 
-  // Donate
   { name: 'donate', type: 'function', stateMutability: 'payable', inputs: [], outputs: [] }
 ];
 
@@ -95,7 +90,6 @@ export default function CampaignDetailPage() {
 
   const provider = useMemo(() => new ethers.JsonRpcProvider(RPC), []);
 
-  // ===== helper: error text =====
   function errText(err: any): string {
     const nested =
       err?.info?.error?.message ||
@@ -159,7 +153,6 @@ export default function CampaignDetailPage() {
           contract.getDonations()
         ]);
 
-        // compute isFinished (deadline lewat atau target tercapai)
         const deadline = Number(deadlineBN);
         const now = Math.floor(Date.now() / 1000);
         const isFinished = now > deadline || BigInt(totalDonatedBN) >= BigInt(goalBN);
@@ -169,7 +162,6 @@ export default function CampaignDetailPage() {
           amount: ethers.formatEther(d.amount)
         }));
 
-        // fetch withdraw requests via requests(i) until revert
         const reqs: WithdrawRow[] = [];
         for (let i = 0; i < 1000; i++) {
           try {
@@ -207,9 +199,7 @@ export default function CampaignDetailPage() {
             const addr = await signer.getAddress();
             setCurrentAccount(addr);
             setIsOwner(addr.toLowerCase() === String(creator).toLowerCase());
-          } catch {
-            // user belum connect — it's fine
-          }
+          } catch {}
         }
 
         setReady(true);
@@ -220,7 +210,6 @@ export default function CampaignDetailPage() {
     })();
   }, [id, provider]);
 
-  // countdown
   useEffect(() => {
     if (!data?.deadline) return;
     const intv = setInterval(() => {
@@ -255,7 +244,6 @@ export default function CampaignDetailPage() {
     }
   }
 
-  // create withdraw request
   async function handleRequestWithdraw(e: React.FormEvent) {
     e.preventDefault();
     if (!withdrawAmount || !withdrawReason.trim()) {
@@ -284,7 +272,6 @@ export default function CampaignDetailPage() {
     }
   }
 
-  // withdraw approved request (choose an executable index; call executeWithdraw)
   async function handleWithdraw() {
     try {
       const approvedIdxs = withdrawals
@@ -298,9 +285,6 @@ export default function CampaignDetailPage() {
       const signer = await browserProvider.getSigner();
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
 
-      // saldo kontrak (info UX)
-      const bal = await (signer.provider as ethers.Provider).getBalance(id);
-
       // pilih index Approved yang lolos preflight
       let chosen: bigint | null = null;
       for (const i of approvedIdxs) {
@@ -309,27 +293,19 @@ export default function CampaignDetailPage() {
           await (contract as any).executeWithdraw.staticCall(idx);
           chosen = idx;
           break;
-        } catch (e) {
+        } catch {
           try {
             const iface = new ethers.Interface(['function executeWithdraw(uint256)']);
             const data = iface.encodeFunctionData('executeWithdraw', [idx]);
             await (signer.provider as ethers.Provider).call({ to: id, data });
             chosen = idx;
             break;
-          } catch {
-            // lanjut cek index berikutnya
-          }
+          } catch {}
         }
       }
 
       if (chosen === null) {
-        const maxNeed = approvedIdxs
-          .map((i) => ethers.parseEther(withdrawals[i].amount))
-          .reduce((a, b) => (a > b ? a : b), BigInt(0));
-        return alert(
-          `Tidak ada request Approved yang bisa dieksekusi sekarang. Cek saldo/aturan kontrak.\n` +
-          `Saldo kontrak: ${ethers.formatEther(bal)} STT • Kebutuhan tertinggi: ${ethers.formatEther(maxNeed)} STT`
-        );
+        return alert('Tidak ada request Approved yang bisa dieksekusi sekarang.');
       }
 
       const tx = await (contract as any).executeWithdraw(chosen);
@@ -348,19 +324,20 @@ export default function CampaignDetailPage() {
 
   const hasApproved = withdrawals.some((w) => w.status === 1);
 
-  // ===== status label & withdrawn history =====
+  // === NEW: status mapping ===
+  const isWithdrawn = (r: WithdrawRow) =>
+    r.status === 2 && parseFloat(r.amount || '0') === 0;
+
   function statusLabel(r: WithdrawRow) {
     if (r.status === 0) return { text: '🟡 Pending',  cls: 'text-yellow-400' };
     if (r.status === 1) return { text: '✅ Approved', cls: 'text-green-400' };
-    // status === 2 → Finalized.
-    // Bedakan Withdrawn vs Denied pakai amount==0 (heuristik aman untuk kontrak lo).
-    if (Number(r.amount) === 0) return { text: '💸 Withdrawn', cls: 'text-blue-400' };
+    if (isWithdrawn(r)) return { text: '💸 Withdrawn', cls: 'text-blue-400' };
     return { text: '❌ Denied', cls: 'text-red-400' };
   }
 
   const withdrawnHistory = withdrawals
     .map((r, i) => ({ ...r, index: i }))
-    .filter((r) => r.status === 2 && Number(r.amount) === 0); // hanya yang benar2 Withdrawn
+    .filter((r) => isWithdrawn(r)); // hanya yang bener-bener Withdrawn
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
@@ -408,7 +385,6 @@ export default function CampaignDetailPage() {
         Address: <span className="text-blue-500">{id}</span>
       </p>
 
-      {/* Form donasi — hanya kalau BELUM selesai */}
       {!data.isFinished && currentAccount && (
         <form onSubmit={handleDonate} className="mb-10">
           <label className="block text-sm font-medium mb-2 text-gray-300">Jumlah Donasi (STT)</label>
@@ -429,7 +405,6 @@ export default function CampaignDetailPage() {
         </form>
       )}
 
-      {/* Form request withdraw — hanya OWNER */}
       {isOwner && (
         <form onSubmit={handleRequestWithdraw} className="mb-10 p-4 rounded-lg bg-gray-800 border border-gray-700">
           <h3 className="font-semibold mb-3">📝 Ajukan Permintaan Withdraw</h3>
@@ -459,7 +434,6 @@ export default function CampaignDetailPage() {
         </form>
       )}
 
-      {/* Tombol withdraw — hanya OWNER & kalau ada request Approved */}
       {isOwner && hasApproved && (
         <button
           onClick={handleWithdraw}
@@ -517,13 +491,13 @@ export default function CampaignDetailPage() {
           <div className="mt-8">
             <h3 className="text-lg font-semibold mb-3">📚 Riwayat Withdraw</h3>
             <ul className="space-y-3">
-              {withdrawnHistory.map((r) => (
-                <li key={`wd-${r.index}`} className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-sm">
+              {withdrawnHistory.map((r, i) => (
+                <li key={`wd-${i}`} className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-sm">
                   <div className="text-white font-semibold">
                     💸 Withdrawn — <span className="text-gray-400 italic">{r.reason}</span>
                   </div>
                   <div className="text-xs text-gray-400">
-                    ID: #{r.index} • {new Date(r.timestamp * 1000).toLocaleString()}
+                    ID: #{i} • {new Date(r.timestamp * 1000).toLocaleString()}
                   </div>
                 </li>
               ))}
