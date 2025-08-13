@@ -200,6 +200,7 @@ export default function CampaignDetailPage() {
         setWithdrawals(reqs);
 
 // === Disambiguate status=2 tanpa event: staticCall executeWithdraw ===
+// === Disambiguate status=2 tanpa event: staticCall executeWithdraw (pakai REQS lokal)
 async function classifyFinalizedRequests(
   reqs: WithdrawRow[],
   baseExec: Set<number>,
@@ -216,40 +217,34 @@ async function classifyFinalizedRequests(
 
     try {
       await (c as any).executeWithdraw.staticCall(i);
-      // Jika tidak revert: treat as ambiguous, biarkan
+      // jika tidak revert → ambiguous (biarkan tidak dilabel)
     } catch (e: any) {
       const msg = (typeof errText === 'function' ? errText(e) : (e?.reason || e?.message || '')).toLowerCase();
-
       if (msg.includes('denied') || msg.includes('not approved') || msg.includes('rejected')) {
         denySet.add(i);
       } else if (msg.includes('already executed') || msg.includes('executed')) {
         execSet.add(i);
       } else {
-        // fallback low-level call untuk dapat reason lain
+        // fallback low-level call untuk reason lain
         try {
           const iface = new ethers.Interface(['function executeWithdraw(uint256)']);
           const data = iface.encodeFunctionData('executeWithdraw', [i]);
           await provider.call({ to: id, data }); // expect revert
         } catch (e2: any) {
-          const msg2 = (typeof errText === 'function' ? errText(e2) : (e2?.reason || e2?.message || '')).toLowerCase();
-          if (msg2.includes('denied') || msg2.includes('not approved') || msg2.includes('rejected')) {
+          const m2 = (typeof errText === 'function' ? errText(e2) : (e2?.reason || e2?.message || '')).toLowerCase();
+          if (m2.includes('denied') || m2.includes('not approved') || m2.includes('rejected')) {
             denySet.add(i);
-          } else if (msg2.includes('already executed') || msg2.includes('executed')) {
+          } else if (m2.includes('already executed') || m2.includes('executed')) {
             execSet.add(i);
           }
         }
       }
     }
   }
-
   return { execSet, denySet };
 }
 
-
-
-
-// ==== HYDRATE executed / denied dari event on-chain (windowed getLogs + robust decode) ====
-// ==== HYDRATE executed / denied (windowed getLogs + classify) ====
+// ==== HYDRATE executed / denied (windowed getLogs + robust decode + klasifikasi) ====
 try {
   const c = new Contract(id, CAMPAIGN_ABI, provider);
 
@@ -258,13 +253,16 @@ try {
 
   async function scanLogsByTopic(topic: string) {
     const latest = await provider.getBlockNumber();
-    const STEP = 50_000;
+    const STEP = 50000;
     const acc: any[] = [];
+
+    // non-indexed form
     for (let from = 0; from <= latest; from += STEP + 1) {
       const to = Math.min(latest, from + STEP);
       const logs = await provider.getLogs({ address: id, topics: [topic], fromBlock: from, toBlock: to });
       if (logs.length) acc.push(...logs);
     }
+    // indexed form
     if (acc.length === 0) {
       for (let from = 0; from <= latest; from += STEP + 1) {
         const to = Math.min(latest, from + STEP);
@@ -306,19 +304,21 @@ try {
     if (n !== null) denySetLogs.add(n);
   }
 
-  // ⬇️ DEKLARASI di scope yang sama
-  const finalExec = execSetLogs.size > 0 ? execSetLogs : loadExecutedLS(id);
-  setExecutedIds(finalExec);
-  setDeniedIds(denySetLogs);
+  // Ambil hasil event + LS sebagai basis
+  const baseExec = execSetLogs.size > 0 ? execSetLogs : loadExecutedLS(id);
+  const baseDeny = denySetLogs;
 
-  // ⬇️ PANGGIL classifier di sini, pakai var yg sama scope-nya
-  const refined = await classifyFinalizedRequests(reqs, finalExec, denySetLogs);
+  // === PANGGIL klasifikasi berbasis REQS lokal (bukan state)
+  const refined = await classifyFinalizedRequests(reqs, baseExec, baseDeny);
+
+  // Commit state akhir
   setExecutedIds(refined.execSet);
   setDeniedIds(refined.denySet);
 } catch {
   setExecutedIds(loadExecutedLS(id));
   setDeniedIds(new Set());
 }
+
 
 
 
@@ -472,7 +472,7 @@ try {
 
   const hasApproved = withdrawals.some((w) => w.status === 1);
 
-  // ===== Label & History (events/LS) =====
+// ===== Label & History =====
 const isWithdrawn = (i: number) => executedIds.has(i);
 const isDeniedByAdmin = (i: number) => deniedIds.has(i);
 
@@ -480,22 +480,22 @@ function statusLabel(i: number, r: WithdrawRow) {
   if (r.status === 0) return { text: '🟡 Pending',  cls: 'text-yellow-400' };
   if (r.status === 1) return { text: '✅ Approved', cls: 'text-green-400' };
 
-  if (isDeniedByAdmin(i)) return { text: '❌ Denied', cls: 'text-red-400' };
+  // Final status:
   if (isWithdrawn(i))     return { text: '💸 Withdrawn', cls: 'text-blue-400' };
+  if (isDeniedByAdmin(i)) return { text: '❌ Denied',    cls: 'text-red-400' };
 
-  // Status 2 tapi belum terklasifikasi dengan pasti
-  if (r.status === 2)     return { text: '⛔ Finalized', cls: 'text-orange-300' };
+  // default untuk status=2 saat event/RPC miss → treat as Denied
+  if (r.status === 2)     return { text: '❌ Denied',    cls: 'text-red-400' };
 
   return { text: '❓ Unknown', cls: 'text-gray-300' };
 }
 
-
-
-  
+// Riwayat withdraw: hanya yang benar-benar executed
 const withdrawnHistory = withdrawals
   .map((r, i) => ({ ...r, index: i }))
   .filter((r) => isWithdrawn(r.index));
 
+  
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
       {data.image ? (
