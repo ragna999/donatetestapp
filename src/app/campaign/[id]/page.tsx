@@ -207,8 +207,8 @@ export default function CampaignDetailPage() {
           const fExec   = (c as any).filters?.WithdrawExecuted?.();
           const fDenied = (c as any).filters?.WithdrawDenied?.();
 
-          const logsExec   = fExec   ? await provider.getLogs({ ...fExec,   fromBlock: BigInt(0), toBlock: 'latest' }) : [];
-          const logsDenied = fDenied ? await provider.getLogs({ ...fDenied, fromBlock: BigInt(0), toBlock: 'latest' }) : [];
+          const logsExec   = fExec   ? await provider.getLogs({ ...fExec,   fromBlock: BigInt(140908639), toBlock: 'latest' }) : [];
+          const logsDenied = fDenied ? await provider.getLogs({ ...fDenied, fromBlock: BigInt(140908639), toBlock: 'latest' }) : [];
 
           const execSet = new Set<number>();
           for (const lg of logsExec) {
