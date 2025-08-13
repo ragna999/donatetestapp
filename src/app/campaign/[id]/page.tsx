@@ -425,22 +425,29 @@ try {
   const hasApproved = withdrawals.some((w) => w.status === 1);
 
   // ===== Label & History (events/LS) =====
-  const isWithdrawn = (i: number) => executedIds.has(i);
-  const isDeniedByAdmin = (i: number) => deniedIds.has(i);
+const isWithdrawn = (i: number) => executedIds.has(i);
+const isDeniedByAdmin = (i: number) => deniedIds.has(i);
+
+function statusLabel(i: number, r: WithdrawRow) {
+  if (r.status === 0) return { text: '🟡 Pending',  cls: 'text-yellow-400' };
+  if (r.status === 1) return { text: '✅ Approved', cls: 'text-green-400' };
+
+  // status=2 dipakai untuk *Executed* dan *Denied*.
+  // Prioritaskan Denied hanya jika *pasti* dideteksi dari event.
+  if (isDeniedByAdmin(i)) return { text: '❌ Denied', cls: 'text-red-400' };
+
+  // Jika tidak terdeteksi Denied, treat sebagai Withdrawn (executed),
+  // termasuk kasus executedIds atau fallback ketika logs tidak tersedia.
+  if (isWithdrawn(i) || r.status === 2) return { text: '💸 Withdrawn', cls: 'text-blue-400' };
+
+  return { text: '❓ Unknown', cls: 'text-gray-300' };
+}
+
   
-  function statusLabel(i: number, r: WithdrawRow) {
-    if (r.status === 0) return { text: '🟡 Pending',  cls: 'text-yellow-400' };
-    if (r.status === 1) return { text: '✅ Approved', cls: 'text-green-400' };
-    // status=2 digunakan baik oleh Denied (admin) maupun Executed (anti re-entrancy).
-    if (isWithdrawn(i)) return { text: '💸 Withdrawn', cls: 'text-blue-400' };
-    if (isDeniedByAdmin(i) || r.status === 2) return { text: '❌ Denied', cls: 'text-red-400' };
-    return { text: '❓ Unknown', cls: 'text-gray-300' };
-  }
-  
-  const withdrawnHistory = withdrawals
-    .map((r, i) => ({ ...r, index: i }))
-    .filter((r) => executedIds.has(r.index));
-  
+const withdrawnHistory = withdrawals
+.map((r, i) => ({ ...r, index: i }))
+.filter((r) => isWithdrawn(r.index) || (r.status === 2 && !isDeniedByAdmin(r.index)));
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
       {data.image ? (
