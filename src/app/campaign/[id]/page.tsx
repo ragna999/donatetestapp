@@ -200,46 +200,63 @@ export default function CampaignDetailPage() {
         setWithdrawals(reqs);
 
         // ==== HYDRATE executed / denied dari event on-chain (pakai contract.filters v6) ====
-        // ==== HYDRATE executed / denied dari event on-chain (robust via topics) ====
+       // ==== HYDRATE executed / denied dari event on-chain (robust topics + decode) ====
 try {
   const c = new Contract(id, CAMPAIGN_ABI, provider);
-
-  // Signature topic (non-indexed arg → nilai ada di log.data)
+  
   const topicExec   = ethers.id('WithdrawExecuted(uint256)');
   const topicDenied = ethers.id('WithdrawDenied(uint256)');
 
-  const [logsExec, logsDenied] = await Promise.all([
-    provider.getLogs({ address: id, topics: [topicExec],   fromBlock: BigInt(0), toBlock: 'latest' }),
-    provider.getLogs({ address: id, topics: [topicDenied], fromBlock: BigInt(0), toBlock: 'latest' }),
-  ]);
+  const base = { address: id, fromBlock: 0 as number, toBlock: 'latest' as const };
+
+  // Coba single-topic; kalau kosong, coba bentuk [topic, null] (untuk indexed arg)
+  let logsExec = await provider.getLogs({ ...base, topics: [topicExec] });
+  if (logsExec.length === 0) {
+    logsExec = await provider.getLogs({ ...base, topics: [topicExec, null] });
+  }
+  let logsDenied = await provider.getLogs({ ...base, topics: [topicDenied] });
+  if (logsDenied.length === 0) {
+    logsDenied = await provider.getLogs({ ...base, topics: [topicDenied, null] });
+  }
+
+  function readIdFromLog(lg: any): number | null {
+    try {
+      // 1) non-indexed → ada di data
+      if (lg.data && lg.data !== '0x') {
+        const [wid] = ethers.AbiCoder.defaultAbiCoder().decode(['uint256'], lg.data);
+        const n = Number(wid);
+        return Number.isNaN(n) ? null : n;
+      }
+      // 2) indexed → ada di topics[1]
+      if (Array.isArray(lg.topics) && lg.topics.length > 1) {
+        const n = Number(BigInt(lg.topics[1]));
+        return Number.isNaN(n) ? null : n;
+      }
+    } catch {}
+    return null;
+  }
 
   const execSet = new Set<number>();
   for (const lg of logsExec) {
-    try {
-      // non-indexed -> id ada di data
-      const [wid] = ethers.AbiCoder.defaultAbiCoder().decode(['uint256'], lg.data);
-      const n = Number(wid);
-      if (!Number.isNaN(n)) execSet.add(n);
-    } catch {}
+    const n = readIdFromLog(lg);
+    if (n !== null) execSet.add(n);
   }
 
   const denySet = new Set<number>();
   for (const lg of logsDenied) {
-    try {
-      const [wid] = ethers.AbiCoder.defaultAbiCoder().decode(['uint256'], lg.data);
-      const n = Number(wid);
-      if (!Number.isNaN(n)) denySet.add(n);
-    } catch {}
+    const n = readIdFromLog(lg);
+    if (n !== null) denySet.add(n);
   }
 
   const finalExec = execSet.size > 0 ? execSet : loadExecutedLS(id);
   setExecutedIds(finalExec);
   setDeniedIds(denySet);
 } catch {
-  // fallback LS supaya yang barusan dieksekusi tetep kebaca
+  // fallback LS kalau RPC getLogs bermasalah
   setExecutedIds(loadExecutedLS(id));
   setDeniedIds(new Set());
 }
+
 
 
         // set base data
