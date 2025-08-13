@@ -302,11 +302,20 @@ try {
     if (n !== null) denySet.add(n);
   }
 
-  const finalExec = execSet.size > 0 ? execSet : loadExecutedLS(id);
-  setExecutedIds(finalExec);
-  setDeniedIds(denySet);
+  // Basis dari event + LS
+const baseExec = execSet.size > 0 ? execSet : loadExecutedLS(id);
+const baseDeny = denySet;
 
-  console.log('exec logs size', execSet.size, 'deny logs size', denySet.size);
+// Perjelas status final tanpa bergantung event (staticCall executeWithdraw)
+const { execSet: refinedExec, denySet: refinedDeny } =
+  await classifyFinalizedRequests(reqs, baseExec, baseDeny);
+
+// Commit hasil akhir ke state
+setExecutedIds(refinedExec);
+setDeniedIds(refinedDeny);
+
+// (opsional) debug
+console.log('hydrated executed', refinedExec.size, 'denied', refinedDeny.size);
 
 } catch {
   setExecutedIds(loadExecutedLS(id));
@@ -462,6 +471,8 @@ try {
 
   const hasApproved = withdrawals.some((w) => w.status === 1);
 
+
+
 // ===== Label & History =====
 const isWithdrawn = (i: number) => executedIds.has(i);
 const isDeniedByAdmin = (i: number) => deniedIds.has(i);
@@ -471,13 +482,13 @@ function statusLabel(i: number, r: WithdrawRow) {
   if (r.status === 1) return { text: '✅ Approved', cls: 'text-green-400' };
 
   // Finalized (status=2 di chain kamu):
-  // 1) Ada bukti Denied → Denied
-  if (isDeniedByAdmin(i)) return { text: '❌ Denied', cls: 'text-red-400' };
-  // 2) Ada bukti Executed → tampilkan sebagai Approved (sesuai keinginan lo)
-  if (isWithdrawn(i))     return { text: '✅ Approved', cls: 'text-green-400' };
-  // 3) Belum jelas → Finalized (sementara)
+  if (isDeniedByAdmin(i)) return { text: '❌ Denied',    cls: 'text-red-400' };
+  if (isWithdrawn(i))     return { text: '⛔ Finalized', cls: 'text-orange-300' };
+
+  // Kalau belum kebaca event/heuristik apa-apa, tetap tampil Finalized netral
   return { text: '⛔ Finalized', cls: 'text-orange-300' };
 }
+
 
 
 
