@@ -241,83 +241,55 @@ async function classifyFinalizedRequests(
 
 
 // ==== HYDRATE executed / denied (windowed getLogs + robust decode) ====
+// ==== HYDRATE executed / denied (windowed getLogs + parseLog, tanpa topics) ====
 try {
   const c = new Contract(id, CAMPAIGN_ABI, provider);
+  const iface = new ethers.Interface(CAMPAIGN_ABI as any);
 
-  const topicExec   = ethers.id('WithdrawExecuted(uint256)');
-  const topicDenied = ethers.id('WithdrawDenied(uint256)');
-
-  async function scanLogsByTopic(topic: string) {
+  async function scanAllLogs() {
     const latest = await provider.getBlockNumber();
-    const STEP = 50000;
+    const STEP = 50000;         // jaga-jaga limit RPC
     const acc: any[] = [];
-
-    // non-indexed form
     for (let from = 0; from <= latest; from += STEP + 1) {
       const to = Math.min(latest, from + STEP);
-      const logs = await provider.getLogs({ address: id, topics: [topic], fromBlock: from, toBlock: to });
+      const logs = await provider.getLogs({ address: id, fromBlock: from, toBlock: to });
       if (logs.length) acc.push(...logs);
     }
-    // indexed form (kalau id event ternyata indexed di kontrak nyatanya)
-    if (acc.length === 0) {
-      for (let from = 0; from <= latest; from += STEP + 1) {
-        const to = Math.min(latest, from + STEP);
-        const logs = await provider.getLogs({ address: id, topics: [topic, null], fromBlock: from, toBlock: to });
-        if (logs.length) acc.push(...logs);
-      }
-    }
     return acc;
-    
   }
 
-  function readIdFromLog(lg: any): number | null {
-    try {
-      if (lg.data && lg.data !== '0x') {
-        const [wid] = ethers.AbiCoder.defaultAbiCoder().decode(['uint256'], lg.data);
-        const n = Number(wid);
-        return Number.isNaN(n) ? null : n;
-      }
-      if (Array.isArray(lg.topics) && lg.topics.length > 1) {
-        const n = Number(BigInt(lg.topics[1]));
-        return Number.isNaN(n) ? null : n;
-      }
-    } catch {}
-    return null;
-  }
-
-  const [logsExec, logsDenied] = await Promise.all([
-    scanLogsByTopic(topicExec),
-    scanLogsByTopic(topicDenied),
-  ]);
+  const logs = await scanAllLogs();
 
   const execSet = new Set<number>();
-  for (const lg of logsExec) {
-    const n = readIdFromLog(lg);
-    if (n !== null) execSet.add(n);
-  }
-
   const denySet = new Set<number>();
-  for (const lg of logsDenied) {
-    const n = readIdFromLog(lg);
-    if (n !== null) denySet.add(n);
+
+  for (const lg of logs) {
+    try {
+      const parsed = iface.parseLog(lg);
+      if (!parsed) continue;
+
+      // Nama event sesuai ABI (apapun indexed/non-indexed & jumlah argumen)
+      if (parsed.name === 'WithdrawExecuted' || parsed.name === 'WithdrawDenied') {
+        // Ambil argumen 'id' dari parsed.args (aman utk indexed/non-indexed)
+        const wid = Number(parsed.args?.id);
+        if (!Number.isNaN(wid)) {
+          if (parsed.name === 'WithdrawExecuted') execSet.add(wid);
+          else denySet.add(wid);
+        }
+      }
+    } catch {
+      // log bukan event yang ada di ABI → skip
+    }
   }
 
-  // Basis dari event + LS
-// Basis dari event + LS
-const baseExec = execSet.size > 0 ? execSet : loadExecutedLS(id);
-const baseDeny = denySet;
+  // Fallback LS kalau event executed lama gak kebaca
+  const finalExec = execSet.size > 0 ? execSet : loadExecutedLS(id);
 
-// Perjelas status final tanpa bergantung event (staticCall executeWithdraw)
-const { execSet: refinedExec, denySet: refinedDeny } =
-  await classifyFinalizedRequests(reqs, baseExec, baseDeny);
+  setExecutedIds(finalExec);
+  setDeniedIds(denySet);
 
-// Commit hasil akhir ke state
-setExecutedIds(refinedExec);
-setDeniedIds(refinedDeny);
-
-// (opsional) debug
-console.log('hydrated executed', refinedExec.size, 'denied', refinedDeny.size);
-
+  // Debug cepat
+  console.log('hydrated exec', finalExec.size, 'deny', denySet.size);
 } catch {
   setExecutedIds(loadExecutedLS(id));
   setDeniedIds(new Set());
