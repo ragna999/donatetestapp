@@ -244,7 +244,7 @@ async function classifyFinalizedRequests(
   return { execSet, denySet };
 }
 
-// ==== HYDRATE executed / denied (windowed getLogs + robust decode + klasifikasi) ====
+// ==== HYDRATE executed / denied (windowed getLogs + robust decode) ====
 try {
   const c = new Contract(id, CAMPAIGN_ABI, provider);
 
@@ -262,7 +262,7 @@ try {
       const logs = await provider.getLogs({ address: id, topics: [topic], fromBlock: from, toBlock: to });
       if (logs.length) acc.push(...logs);
     }
-    // indexed form
+    // indexed form (kalau id event ternyata indexed di kontrak nyatanya)
     if (acc.length === 0) {
       for (let from = 0; from <= latest; from += STEP + 1) {
         const to = Math.min(latest, from + STEP);
@@ -293,35 +293,25 @@ try {
     scanLogsByTopic(topicDenied),
   ]);
 
-  const execSetLogs = new Set<number>();
+  const execSet = new Set<number>();
   for (const lg of logsExec) {
     const n = readIdFromLog(lg);
-    if (n !== null) execSetLogs.add(n);
+    if (n !== null) execSet.add(n);
   }
-  const denySetLogs = new Set<number>();
+
+  const denySet = new Set<number>();
   for (const lg of logsDenied) {
     const n = readIdFromLog(lg);
-    if (n !== null) denySetLogs.add(n);
+    if (n !== null) denySet.add(n);
   }
 
-  // Ambil hasil event + LS sebagai basis
-  const baseExec = execSetLogs.size > 0 ? execSetLogs : loadExecutedLS(id);
-  const baseDeny = denySetLogs;
-
-  // === PANGGIL klasifikasi berbasis REQS lokal (bukan state)
-  const refined = await classifyFinalizedRequests(reqs, baseExec, baseDeny);
-
-  // Commit state akhir
-  setExecutedIds(refined.execSet);
-  setDeniedIds(refined.denySet);
+  const finalExec = execSet.size > 0 ? execSet : loadExecutedLS(id);
+  setExecutedIds(finalExec);
+  setDeniedIds(denySet);
 } catch {
   setExecutedIds(loadExecutedLS(id));
   setDeniedIds(new Set());
 }
-
-
-
-
 
 
         // set base data
@@ -477,25 +467,28 @@ const isWithdrawn = (i: number) => executedIds.has(i);
 const isDeniedByAdmin = (i: number) => deniedIds.has(i);
 
 function statusLabel(i: number, r: WithdrawRow) {
+  // Pending & Approved apa adanya
   if (r.status === 0) return { text: '🟡 Pending',  cls: 'text-yellow-400' };
   if (r.status === 1) return { text: '✅ Approved', cls: 'text-green-400' };
 
-  // Final status:
-  if (isWithdrawn(i))     return { text: '💸 Withdrawn', cls: 'text-blue-400' };
-  if (isDeniedByAdmin(i)) return { text: '❌ Denied',    cls: 'text-red-400' };
+  // Finalized (status=2 di chain kamu)
+  // 1) Kalau ketemu di deniedIds → Denied
+  if (isDeniedByAdmin(i)) return { text: '❌ Denied', cls: 'text-red-400' };
 
-  // default untuk status=2 saat event/RPC miss → treat as Denied
-  if (r.status === 2)     return { text: '❌ Denied',    cls: 'text-red-400' };
+  // 2) Kalau ketemu di executedIds → dianggap Approved (karena wd sukses)
+  if (isWithdrawn(i))     return { text: '✅ Approved', cls: 'text-green-400' };
 
-  return { text: '❓ Unknown', cls: 'text-gray-300' };
+  // 3) Sisanya (gak kebaca event) → tampil netral dulu
+  return { text: '⛔ Finalized', cls: 'text-orange-300' };
 }
+
 
 // Riwayat withdraw: hanya yang benar-benar executed
 const withdrawnHistory = withdrawals
   .map((r, i) => ({ ...r, index: i }))
   .filter((r) => isWithdrawn(r.index));
 
-  
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
       {data.image ? (
