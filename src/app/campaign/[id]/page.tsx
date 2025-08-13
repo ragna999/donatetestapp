@@ -303,6 +303,7 @@ try {
   }
 
   // Basis dari event + LS
+// Basis dari event + LS
 const baseExec = execSet.size > 0 ? execSet : loadExecutedLS(id);
 const baseDeny = denySet;
 
