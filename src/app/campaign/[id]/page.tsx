@@ -199,6 +199,74 @@ export default function CampaignDetailPage() {
         }
         setWithdrawals(reqs);
 
+        // === Disambiguate status=2 tanpa event: staticCall executeWithdraw ===
+async function classifyFinalizedRequests() {
+  try {
+    const c = new Contract(id, CAMPAIGN_ABI, provider);
+    const browserProvider = (window as any).ethereum ? new ethers.BrowserProvider((window as any).ethereum) : null;
+    const signer = browserProvider ? await browserProvider.getSigner().catch(() => null) : null;
+
+    // Pakai provider read-only untuk call; kalau perlu, fallback ke low-level call via signer.provider
+    const execSet = new Set(executedIds);
+    const denySet = new Set(deniedIds);
+
+    for (let i = 0; i < withdrawals.length; i++) {
+      const r = withdrawals[i];
+      if (r.status !== 2) continue;
+      if (execSet.has(i) || denySet.has(i)) continue;
+
+      try {
+        // 1) Coba staticCall langsung
+        await (c as any).executeWithdraw.staticCall(i);
+        // Kalau gak revert, berarti sebenarnya masih APPROVED (aneh untuk status=2), skip
+      } catch (e: any) {
+        const msg = (function m() {
+          // manfaatkan helper errText kamu
+          try { return (typeof errText === 'function') ? errText(e) : (e?.reason || e?.message || ''); } catch { return ''; }
+        })().toLowerCase();
+
+        // Heuristik pesan (samakan dengan require di kontrak kamu)
+        if (msg.includes('denied') || msg.includes('not approved') || msg.includes('notapproved') || msg.includes('rejected')) {
+          denySet.add(i);
+          continue;
+        }
+        if (msg.includes('already executed') || msg.includes('executed') || msg.includes('alreadyexecuted')) {
+          execSet.add(i);
+          continue;
+        }
+
+        // Fallback ekstra: low-level call encode data (beberapa RPC ngasih pesan berbeda)
+        try {
+          const iface = new ethers.Interface(['function executeWithdraw(uint256)']);
+          const data = iface.encodeFunctionData('executeWithdraw', [i]);
+          const prov = (signer?.provider as ethers.Provider) || provider;
+          await prov.call({ to: id, data }); // expect revert
+          await classifyFinalizedRequests();
+        } catch (e2: any) {
+          const msg2 = (function m2() {
+            try { return (typeof errText === 'function') ? errText(e2) : (e2?.reason || e2?.message || ''); } catch { return ''; }
+          })().toLowerCase();
+
+          if (msg2.includes('denied') || msg2.includes('not approved') || msg2.includes('rejected')) {
+            denySet.add(i);
+          } else if (msg2.includes('already executed') || msg2.includes('executed')) {
+            execSet.add(i);
+          }
+        }
+      }
+    }
+
+    // commit hasil
+    setExecutedIds(execSet);
+    setDeniedIds(denySet);
+    saveExecutedLS(id, execSet); // simpen yang executed biar persist
+  } catch (e) {
+    // diamkan; UI masih punya fallback label
+    console.warn('classifyFinalizedRequests warn:', e);
+  }
+}
+
+
 // ==== HYDRATE executed / denied dari event on-chain (windowed getLogs + robust decode) ====
 try {
   const c = new Contract(id, CAMPAIGN_ABI, provider);
