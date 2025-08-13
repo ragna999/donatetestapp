@@ -199,54 +199,39 @@ export default function CampaignDetailPage() {
         }
         setWithdrawals(reqs);
 
-        // === Disambiguate status=2 tanpa event: staticCall executeWithdraw ===
-async function classifyFinalizedRequests() {
-  try {
-    const c = new Contract(id, CAMPAIGN_ABI, provider);
-    const browserProvider = (window as any).ethereum ? new ethers.BrowserProvider((window as any).ethereum) : null;
-    const signer = browserProvider ? await browserProvider.getSigner().catch(() => null) : null;
+// === Disambiguate status=2 tanpa event: staticCall executeWithdraw ===
+async function classifyFinalizedRequests(
+  reqs: WithdrawRow[],
+  baseExec: Set<number>,
+  baseDeny: Set<number>
+) {
+  const c = new Contract(id, CAMPAIGN_ABI, provider);
+  const execSet = new Set(baseExec);
+  const denySet = new Set(baseDeny);
 
-    // Pakai provider read-only untuk call; kalau perlu, fallback ke low-level call via signer.provider
-    const execSet = new Set(executedIds);
-    const denySet = new Set(deniedIds);
+  for (let i = 0; i < reqs.length; i++) {
+    const r = reqs[i];
+    if (r.status !== 2) continue;
+    if (execSet.has(i) || denySet.has(i)) continue;
 
-    for (let i = 0; i < withdrawals.length; i++) {
-      const r = withdrawals[i];
-      if (r.status !== 2) continue;
-      if (execSet.has(i) || denySet.has(i)) continue;
+    try {
+      await (c as any).executeWithdraw.staticCall(i);
+      // Jika tidak revert: treat as ambiguous, biarkan
+    } catch (e: any) {
+      const msg = (typeof errText === 'function' ? errText(e) : (e?.reason || e?.message || '')).toLowerCase();
 
-      try {
-        // 1) Coba staticCall langsung
-        await (c as any).executeWithdraw.staticCall(i);
-        // Kalau gak revert, berarti sebenarnya masih APPROVED (aneh untuk status=2), skip
-      } catch (e: any) {
-        const msg = (function m() {
-          // manfaatkan helper errText kamu
-          try { return (typeof errText === 'function') ? errText(e) : (e?.reason || e?.message || ''); } catch { return ''; }
-        })().toLowerCase();
-
-        // Heuristik pesan (samakan dengan require di kontrak kamu)
-        if (msg.includes('denied') || msg.includes('not approved') || msg.includes('notapproved') || msg.includes('rejected')) {
-          denySet.add(i);
-          continue;
-        }
-        if (msg.includes('already executed') || msg.includes('executed') || msg.includes('alreadyexecuted')) {
-          execSet.add(i);
-          continue;
-        }
-
-        // Fallback ekstra: low-level call encode data (beberapa RPC ngasih pesan berbeda)
+      if (msg.includes('denied') || msg.includes('not approved') || msg.includes('rejected')) {
+        denySet.add(i);
+      } else if (msg.includes('already executed') || msg.includes('executed')) {
+        execSet.add(i);
+      } else {
+        // fallback low-level call untuk dapat reason lain
         try {
           const iface = new ethers.Interface(['function executeWithdraw(uint256)']);
           const data = iface.encodeFunctionData('executeWithdraw', [i]);
-          const prov = (signer?.provider as ethers.Provider) || provider;
-          await prov.call({ to: id, data }); // expect revert
-          await classifyFinalizedRequests();
+          await provider.call({ to: id, data }); // expect revert
         } catch (e2: any) {
-          const msg2 = (function m2() {
-            try { return (typeof errText === 'function') ? errText(e2) : (e2?.reason || e2?.message || ''); } catch { return ''; }
-          })().toLowerCase();
-
+          const msg2 = (typeof errText === 'function' ? errText(e2) : (e2?.reason || e2?.message || '')).toLowerCase();
           if (msg2.includes('denied') || msg2.includes('not approved') || msg2.includes('rejected')) {
             denySet.add(i);
           } else if (msg2.includes('already executed') || msg2.includes('executed')) {
@@ -255,39 +240,31 @@ async function classifyFinalizedRequests() {
         }
       }
     }
-
-    // commit hasil
-    setExecutedIds(execSet);
-    setDeniedIds(denySet);
-    saveExecutedLS(id, execSet); // simpen yang executed biar persist
-  } catch (e) {
-    // diamkan; UI masih punya fallback label
-    console.warn('classifyFinalizedRequests warn:', e);
   }
+
+  return { execSet, denySet };
 }
 
 
+
+
 // ==== HYDRATE executed / denied dari event on-chain (windowed getLogs + robust decode) ====
+// ==== HYDRATE executed / denied (windowed getLogs + classify) ====
 try {
   const c = new Contract(id, CAMPAIGN_ABI, provider);
 
-  // Topic hash (ethers v6)
   const topicExec   = ethers.id('WithdrawExecuted(uint256)');
   const topicDenied = ethers.id('WithdrawDenied(uint256)');
 
-  // windowed scan to avoid RPC range limits
   async function scanLogsByTopic(topic: string) {
     const latest = await provider.getBlockNumber();
-    const STEP = 50_000; // sesuaikan kalau RPC protes
+    const STEP = 50_000;
     const acc: any[] = [];
-
-    // 1) non-indexed form: topics: [topic]
     for (let from = 0; from <= latest; from += STEP + 1) {
       const to = Math.min(latest, from + STEP);
       const logs = await provider.getLogs({ address: id, topics: [topic], fromBlock: from, toBlock: to });
       if (logs.length) acc.push(...logs);
     }
-    // 2) indexed form: topics: [topic, null]  (kalau event 'id' ternyata indexed)
     if (acc.length === 0) {
       for (let from = 0; from <= latest; from += STEP + 1) {
         const to = Math.min(latest, from + STEP);
@@ -300,13 +277,11 @@ try {
 
   function readIdFromLog(lg: any): number | null {
     try {
-      // non-indexed → ada di data
       if (lg.data && lg.data !== '0x') {
         const [wid] = ethers.AbiCoder.defaultAbiCoder().decode(['uint256'], lg.data);
         const n = Number(wid);
         return Number.isNaN(n) ? null : n;
       }
-      // indexed → ada di topics[1]
       if (Array.isArray(lg.topics) && lg.topics.length > 1) {
         const n = Number(BigInt(lg.topics[1]));
         return Number.isNaN(n) ? null : n;
@@ -320,26 +295,31 @@ try {
     scanLogsByTopic(topicDenied),
   ]);
 
-  const execSet = new Set<number>();
+  const execSetLogs = new Set<number>();
   for (const lg of logsExec) {
     const n = readIdFromLog(lg);
-    if (n !== null) execSet.add(n);
+    if (n !== null) execSetLogs.add(n);
   }
-
-  const denySet = new Set<number>();
+  const denySetLogs = new Set<number>();
   for (const lg of logsDenied) {
     const n = readIdFromLog(lg);
-    if (n !== null) denySet.add(n);
+    if (n !== null) denySetLogs.add(n);
   }
 
-  const finalExec = execSet.size > 0 ? execSet : loadExecutedLS(id);
+  // ⬇️ DEKLARASI di scope yang sama
+  const finalExec = execSetLogs.size > 0 ? execSetLogs : loadExecutedLS(id);
   setExecutedIds(finalExec);
-  setDeniedIds(denySet);
+  setDeniedIds(denySetLogs);
+
+  // ⬇️ PANGGIL classifier di sini, pakai var yg sama scope-nya
+  const refined = await classifyFinalizedRequests(reqs, finalExec, denySetLogs);
+  setExecutedIds(refined.execSet);
+  setDeniedIds(refined.denySet);
 } catch {
-  // fallback LS kalau RPC getLogs bermasalah
   setExecutedIds(loadExecutedLS(id));
   setDeniedIds(new Set());
 }
+
 
 
 
@@ -500,18 +480,21 @@ function statusLabel(i: number, r: WithdrawRow) {
   if (r.status === 0) return { text: '🟡 Pending',  cls: 'text-yellow-400' };
   if (r.status === 1) return { text: '✅ Approved', cls: 'text-green-400' };
 
-  // Finalized:
   if (isDeniedByAdmin(i)) return { text: '❌ Denied', cls: 'text-red-400' };
-  if (isWithdrawn(i) || r.status === 2) return { text: '💸 Withdrawn', cls: 'text-blue-400' };
+  if (isWithdrawn(i))     return { text: '💸 Withdrawn', cls: 'text-blue-400' };
+
+  // Status 2 tapi belum terklasifikasi dengan pasti
+  if (r.status === 2)     return { text: '⛔ Finalized', cls: 'text-orange-300' };
 
   return { text: '❓ Unknown', cls: 'text-gray-300' };
 }
 
 
+
   
 const withdrawnHistory = withdrawals
-.map((r, i) => ({ ...r, index: i }))
-.filter((r) => isWithdrawn(r.index) || (r.status === 2 && !isDeniedByAdmin(r.index)));
+  .map((r, i) => ({ ...r, index: i }))
+  .filter((r) => isWithdrawn(r.index));
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
