@@ -1,4 +1,4 @@
-// CampaignDetailPage.tsx — final rewrite with on-chain event hydration for Withdrawn vs Denied
+// CampaignDetailPage.tsx — final rewrite (events hydration + LS fallback)
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -19,7 +19,7 @@ const CAMPAIGN_ABI = [
   { name: 'deadline', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
   { name: 'social', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
 
-  // Donations
+  // Donations (tuple[])
   {
     name: 'getDonations',
     type: 'function',
@@ -46,7 +46,7 @@ const CAMPAIGN_ABI = [
       { name: 'amount', type: 'uint256' },
       { name: 'reason', type: 'string' },
       { name: 'timestamp', type: 'uint256' },
-      { name: 'status', type: 'uint8' }, // 0=Pending, 1=Approved, 2=Denied (juga dipakai kontrak saat execute)
+      { name: 'status', type: 'uint8' }, // 0=Pending,1=Approved,2=Denied (juga dipakai saat execute)
     ]
   },
 
@@ -57,7 +57,7 @@ const CAMPAIGN_ABI = [
   // donate
   { name: 'donate', type: 'function', stateMutability: 'payable', inputs: [], outputs: [] },
 
-  // events (buat decode logs)
+  // events (untuk parseLog)
   { type: 'event', name: 'WithdrawExecuted', inputs: [{ name: 'id', type: 'uint256', indexed: false }] },
   { type: 'event', name: 'WithdrawDenied',   inputs: [{ name: 'id', type: 'uint256', indexed: false }] },
 ] as const;
@@ -81,7 +81,7 @@ export default function CampaignDetailPage() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawReason, setWithdrawReason] = useState('');
 
-  // On-chain derived sets
+  // On-chain derived
   const [executedIds, setExecutedIds] = useState<Set<number>>(new Set());
   const [deniedIds, setDeniedIds] = useState<Set<number>>(new Set());
 
@@ -118,7 +118,7 @@ export default function CampaignDetailPage() {
     return nested || String(err || 'Unknown error');
   }
 
-  // localStorage fallback if node log fetch fails
+  // localStorage fallback
   function executedKey(addr: string) {
     return `wd:executed:${addr.toLowerCase()}`;
   }
@@ -172,7 +172,7 @@ export default function CampaignDetailPage() {
           contract.getDonations()
         ]);
 
-        // isFinished: deadline lewat atau goal tercapai
+        // isFinished
         const deadline = Number(deadlineBN);
         const now = Math.floor(Date.now() / 1000);
         const isFinished = now > deadline || BigInt(totalDonatedBN) >= BigInt(goalBN);
@@ -199,31 +199,22 @@ export default function CampaignDetailPage() {
         }
         setWithdrawals(reqs);
 
-        // hydrate executed / denied from logs
+        // ==== HYDRATE executed / denied dari event on-chain (pakai contract.filters v6) ====
         try {
-          const iface = new ethers.Interface([
-            'event WithdrawExecuted(uint256 id)',
-            'event WithdrawDenied(uint256 id)',
-          ]);
+          const c = new Contract(id, CAMPAIGN_ABI, provider);
 
-          const evExec = iface.getEvent('WithdrawExecuted');
-          const evDenied = iface.getEvent('WithdrawDenied');
+          // Bisa undefined kalau event gak ada di ABI (aman)
+          const fExec   = (c as any).filters?.WithdrawExecuted?.();
+          const fDenied = (c as any).filters?.WithdrawDenied?.();
 
-          const topicExecuted = evExec ? evExec.topicHash : undefined;
-          const topicDenied   = evDenied ? evDenied.topicHash : undefined;
-
-const logsExec = topicExecuted
-  ? await provider.getLogs({ address: id, fromBlock: BigInt(0), toBlock: 'latest', topics: [topicExecuted] })
-  : [];
-          const logsDenied = topicDenied
-  ? await provider.getLogs({ address: id, fromBlock: BigInt(0), toBlock: 'latest', topics: [topicDenied] })
-  : [];
+          const logsExec   = fExec   ? await provider.getLogs({ ...fExec,   fromBlock: BigInt(0), toBlock: 'latest' }) : [];
+          const logsDenied = fDenied ? await provider.getLogs({ ...fDenied, fromBlock: BigInt(0), toBlock: 'latest' }) : [];
 
           const execSet = new Set<number>();
           for (const lg of logsExec) {
             try {
-              const ev = iface.decodeEventLog('WithdrawExecuted', lg.data, lg.topics);
-              const wid = Number(ev.id);
+              const parsed = c.interface.parseLog(lg);
+              const wid = Number(parsed?.args?.id);
               if (!Number.isNaN(wid)) execSet.add(wid);
             } catch {}
           }
@@ -231,18 +222,17 @@ const logsExec = topicExecuted
           const denySet = new Set<number>();
           for (const lg of logsDenied) {
             try {
-              const ev = iface.decodeEventLog('WithdrawDenied', lg.data, lg.topics);
-              const wid = Number(ev.id);
+              const parsed = c.interface.parseLog(lg);
+              const wid = Number(parsed?.args?.id);
               if (!Number.isNaN(wid)) denySet.add(wid);
             } catch {}
           }
 
-          // prefer on-chain; if none, fallback to LS to at least mark the last executed from this device
           const finalExec = execSet.size > 0 ? execSet : loadExecutedLS(id);
           setExecutedIds(finalExec);
           setDeniedIds(denySet);
         } catch {
-          // provider cannot look back that far or no logs support → fallback to LS
+          // provider.getLogs error → fallback LS supaya yang barusan dieksekusi tetep kebaca
           setExecutedIds(loadExecutedLS(id));
           setDeniedIds(new Set());
         }
@@ -343,11 +333,7 @@ const logsExec = topicExecuted
 
   async function handleWithdraw() {
     try {
-      // ambil semua index Approved dari state
-      const approvedIdxs = withdrawals
-        .map((w, i) => (w.status === 1 ? i : -1))
-        .filter((i) => i >= 0);
-
+      const approvedIdxs = withdrawals.map((w, i) => (w.status === 1 ? i : -1)).filter((i) => i >= 0);
       if (approvedIdxs.length === 0) return alert('Belum ada request yang disetujui admin');
 
       if (!(window as any).ethereum) return alert('Wallet belum terhubung');
@@ -363,16 +349,14 @@ const logsExec = topicExecuted
           await (contract as any).executeWithdraw.staticCall(idx);
           chosen = idx;
           break;
-        } catch (e) {
+        } catch {
           try {
             const iface = new ethers.Interface(['function executeWithdraw(uint256)']);
             const data = iface.encodeFunctionData('executeWithdraw', [idx]);
             await (signer.provider as ethers.Provider).call({ to: id, data });
             chosen = idx;
             break;
-          } catch (raw) {
-            console.warn(`Preflight gagal untuk index ${i}:`, errText(raw));
-          }
+          } catch {}
         }
       }
 
@@ -381,7 +365,7 @@ const logsExec = topicExecuted
       const tx = await (contract as any).executeWithdraw(chosen);
       await tx.wait();
 
-      // Tandai executed (fallback LS) — on-chain event juga akan meng-hydrate saat reload
+      // Tandai executed (fallback LS) — event on-chain juga akan hydrate saat reload
       const executed = new Set(executedIds);
       executed.add(Number(chosen));
       setExecutedIds(executed);
@@ -397,18 +381,18 @@ const logsExec = topicExecuted
 
   if (!ready || !data) {
     return <p className="p-6 text-white">Loading campaign...</p>;
-    }
+  }
 
   const hasApproved = withdrawals.some((w) => w.status === 1);
 
-  // ===== Label & History (gunakan on-chain events/LS) =====
+  // ===== Label & History (events/LS) =====
   const isWithdrawn = (i: number) => executedIds.has(i);
   const isDeniedByAdmin = (i: number) => deniedIds.has(i);
 
   function statusLabel(i: number, r: WithdrawRow) {
     if (r.status === 0) return { text: '🟡 Pending',  cls: 'text-yellow-400' };
     if (r.status === 1) return { text: '✅ Approved', cls: 'text-green-400' };
-    // status 2 dari kontrak bisa berarti: Denied oleh admin ATAU Executed (kontrak set ke Denied utk cegah re-entrancy)
+    // status 2 (kontrak set ke Denied saat execute untuk cegah re-entrancy)
     if (isWithdrawn(i)) return { text: '💸 Withdrawn', cls: 'text-blue-400' };
     if (isDeniedByAdmin(i) || r.status === 2) return { text: '❌ Denied', cls: 'text-red-400' };
     return { text: '❓ Unknown', cls: 'text-gray-300' };
@@ -416,7 +400,7 @@ const logsExec = topicExecuted
 
   const withdrawnHistory = withdrawals
     .map((r, i) => ({ ...r, index: i }))
-    .filter((r) => executedIds.has(r.index)); // hanya yang benar2 Withdrawn (dari event/LS)
+    .filter((r) => executedIds.has(r.index));
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6 max-w-3xl mx-auto" suppressHydrationWarning>
