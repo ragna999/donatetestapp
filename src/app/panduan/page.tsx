@@ -194,8 +194,11 @@ export default function PanduanPage() {
                   identitas dan kelengkapan data pembuat campaign.
                 </AccordionItem>
                 <AccordionItem title="Kemana dana jika campaign gagal mencapai target?">
-                  Jika campaign tidak mencapai target dalam waktu yang ditentukan, dana bisa diklaim kembali
-                  (refund) oleh donatur melalui halaman campaign.
+                  Jika deadline campaign sudah lewat dan target belum tercapai, mode refund otomatis aktif.
+                  Penyelenggara tidak bisa menarik dana lagi, dan donatur bisa klaim refund melalui halaman campaign.
+                  Namun perlu diketahui: jika penyelenggara sudah menarik sebagian dana sebelum deadline
+                  (dengan persetujuan admin), refund yang kamu terima bersifat proporsional — sesuai sisa dana
+                  yang masih ada di kontrak.
                 </AccordionItem>
               </div>
             </div>
@@ -269,8 +272,11 @@ export default function PanduanPage() {
                   Kamu bisa membuat campaign baru dengan dokumen yang diperbaiki.
                 </AccordionItem>
                 <AccordionItem title="Bagaimana cara menarik dana?">
-                  Setelah campaign berhasil mencapai target atau berakhir, pembuat campaign bisa menarik dana
-                  langsung dari halaman campaign menggunakan wallet yang sama saat membuat campaign.
+                  Penyelenggara bisa mengajukan permintaan withdraw kapan saja selama campaign masih berjalan
+                  (sebelum deadline), dengan menyertakan alasan penarikan. Admin akan mereview dan menyetujui
+                  atau menolak permintaan tersebut. Setelah disetujui, penyelenggara bisa mengeksekusi penarikan
+                  dari halaman campaign. Jika deadline sudah lewat dan target tidak tercapai, mode refund aktif
+                  dan withdraw tidak lagi bisa dilakukan.
                 </AccordionItem>
                 <AccordionItem title="Apa itu IPFS? Kenapa dokumen disimpan di sana?">
                   IPFS (InterPlanetary File System) adalah sistem penyimpanan terdesentralisasi. File yang
