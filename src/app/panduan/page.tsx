@@ -3,12 +3,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 
-type Section = {
-  id: string;
-  title: string;
-  content: React.ReactNode;
-};
-
 function AccordionItem({ title, children }: { title: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
@@ -71,13 +65,9 @@ export default function PanduanPage() {
 
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-4 py-1.5 mb-4">
-            <span className="text-indigo-400 text-sm font-medium">Panduan Pengguna</span>
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-3">Cara Menggunakan Donatree</h1>
+          <h1 className="text-3xl font-bold text-white mb-3">Panduan Donatree</h1>
           <p className="text-gray-400 text-base max-w-xl mx-auto">
-            Platform donasi berbasis blockchain yang transparan, terverifikasi, dan aman.
-            Pelajari cara berdonasi atau membuat kampanye di bawah ini.
+            Pelajari cara berdonasi atau membuat kampanye di platform ini.
           </p>
         </div>
 
@@ -85,9 +75,9 @@ export default function PanduanPage() {
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8">
           <h2 className="text-white font-semibold text-lg mb-3">Apa itu Donatree?</h2>
           <p className="text-gray-300 text-sm leading-relaxed mb-4">
-            Donatree adalah platform donasi yang menggunakan teknologi <strong className="text-white">blockchain</strong> untuk
-            memastikan setiap transaksi tercatat secara permanen, transparan, dan tidak bisa dimanipulasi.
-            Tidak ada pihak ketiga yang bisa menyentuh dana donasi — semuanya dikelola oleh <strong className="text-white">smart contract</strong> secara otomatis.
+            Donatree adalah platform donasi berbasis <strong className="text-white">blockchain</strong>.
+            Setiap transaksi tercatat secara permanen dan tidak bisa diubah. Dana donasi dikelola oleh{' '}
+            <strong className="text-white">smart contract</strong>, bukan oleh individu atau organisasi tertentu.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
@@ -106,17 +96,16 @@ export default function PanduanPage() {
 
         {/* Apa itu Wallet */}
         <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-6 mb-8">
-          <h2 className="text-white font-semibold text-lg mb-2">Apa itu Wallet & Kenapa Dibutuhkan?</h2>
+          <h2 className="text-white font-semibold text-lg mb-2">Apa itu Wallet dan kenapa dibutuhkan?</h2>
           <p className="text-gray-300 text-sm leading-relaxed mb-3">
-            Wallet (dompet digital) adalah akun kamu di dunia blockchain. Fungsinya seperti rekening bank,
-            tapi kamu yang pegang penuh kendalinya — tanpa bank, tanpa perantara.
-            Di Donatree, wallet dipakai untuk:
+            Wallet adalah akun kamu di blockchain. Fungsinya seperti rekening bank, tapi kamu sendiri yang
+            mengontrolnya tanpa perantara. Di Donatree, wallet dipakai untuk:
           </p>
           <ul className="space-y-1.5 text-sm text-gray-300">
             {[
               'Melakukan donasi (mengirim ETH)',
               'Membuat kampanye donasi',
-              'Mengidentifikasi identitas kamu secara aman',
+              'Login ke platform',
             ].map(item => (
               <li key={item} className="flex items-start gap-2">
                 <span className="text-amber-400 mt-0.5">→</span>
@@ -125,8 +114,8 @@ export default function PanduanPage() {
             ))}
           </ul>
           <p className="text-gray-400 text-xs mt-4">
-            Platform ini menggunakan jaringan <strong className="text-amber-300">Sepolia Testnet</strong> — jaringan percobaan Ethereum.
-            ETH yang digunakan adalah ETH testnet (tidak bernilai uang nyata), cocok untuk mencoba platform tanpa risiko.
+            Platform ini berjalan di <strong className="text-amber-300">Sepolia Testnet</strong>, jaringan percobaan Ethereum.
+            ETH yang digunakan tidak bernilai uang nyata, jadi aman untuk dicoba.
           </p>
         </div>
 
@@ -166,11 +155,11 @@ export default function PanduanPage() {
               </div>
               <div className="space-y-5">
                 <StepCard number={1} title="Install MetaMask" desc="Download ekstensi MetaMask di browser kamu (Chrome/Firefox). Buat akun baru atau import akun yang sudah ada." />
-                <StepCard number={2} title="Ganti jaringan ke Sepolia Testnet" desc="Di MetaMask, pilih jaringan 'Sepolia Test Network'. Kalau tidak muncul, aktifkan dulu di Settings → Advanced → Show test networks." />
-                <StepCard number={3} title="Dapatkan ETH Testnet" desc="Kunjungi Sepolia Faucet (sepoliafaucet.com) untuk mendapatkan ETH gratis untuk testing. Masukkan alamat wallet kamu." />
-                <StepCard number={4} title="Connect Wallet di Donatree" desc="Klik tombol 'Connect Wallet' di navbar, lalu ikuti instruksi dari Privy untuk menghubungkan wallet kamu." />
-                <StepCard number={5} title="Pilih Campaign & Donasi" desc="Browse campaign yang tersedia, klik campaign yang ingin kamu dukung, masukkan jumlah ETH, lalu konfirmasi transaksi di MetaMask." />
-                <StepCard number={6} title="Selesai!" desc="Donasi kamu langsung masuk ke smart contract campaign. Kamu bisa cek riwayat donasi di halaman Riwayat." />
+                <StepCard number={2} title="Ganti jaringan ke Sepolia Testnet" desc="Di MetaMask, pilih jaringan Sepolia Test Network. Kalau tidak muncul, aktifkan di Settings > Advanced > Show test networks." />
+                <StepCard number={3} title="Dapatkan ETH Testnet" desc="Kunjungi Sepolia Faucet (sepoliafaucet.com) untuk mendapatkan ETH gratis. Masukkan alamat wallet kamu." />
+                <StepCard number={4} title="Connect Wallet" desc="Klik tombol Connect Wallet di navbar, lalu ikuti instruksi untuk menghubungkan wallet kamu." />
+                <StepCard number={5} title="Pilih Campaign dan Donasi" desc="Pilih campaign yang ingin kamu dukung, masukkan jumlah ETH, lalu konfirmasi transaksi di MetaMask." />
+                <StepCard number={6} title="Selesai" desc="Donasi langsung masuk ke smart contract campaign. Riwayat donasi bisa dicek di halaman Riwayat." />
               </div>
             </div>
 
@@ -178,27 +167,26 @@ export default function PanduanPage() {
               <h2 className="text-white font-semibold text-lg mb-4">FAQ Donatur</h2>
               <div className="space-y-3">
                 <AccordionItem title="Apakah dana saya aman?">
-                  Ya. Dana masuk langsung ke smart contract — bukan rekening pribadi siapapun.
-                  Smart contract hanya bisa diakses oleh pembuat campaign sesuai aturan yang sudah ditetapkan.
-                  Semua transaksi bisa dicek secara publik di Etherscan.
+                  Dana masuk langsung ke smart contract, bukan rekening pribadi siapapun.
+                  Smart contract hanya bisa diakses oleh pembuat campaign sesuai aturan yang sudah ditetapkan,
+                  dan semua transaksi bisa dicek secara publik di Etherscan.
                 </AccordionItem>
                 <AccordionItem title="Bisakah saya membatalkan donasi?">
-                  Donasi ke blockchain bersifat final dan tidak bisa dibatalkan. Pastikan kamu yakin sebelum mengkonfirmasi transaksi di MetaMask.
+                  Tidak bisa. Transaksi blockchain bersifat final. Pastikan kamu yakin sebelum mengkonfirmasi di MetaMask.
                 </AccordionItem>
-                <AccordionItem title="Kenapa ada 'gas fee'?">
-                  Gas fee adalah biaya kecil yang dibayarkan ke jaringan Ethereum untuk memproses transaksimu.
-                  Di Sepolia Testnet, gas fee dibayar dengan ETH testnet (gratis dari faucet).
+                <AccordionItem title="Kenapa ada gas fee?">
+                  Gas fee adalah biaya untuk memproses transaksi di jaringan Ethereum.
+                  Di Sepolia Testnet, gas fee dibayar dengan ETH testnet yang gratis dari faucet.
                 </AccordionItem>
                 <AccordionItem title="Bagaimana cara tahu campaign ini legitimate?">
-                  Setiap campaign sudah diverifikasi oleh admin Donatree sebelum tayang. Admin mengecek dokumen
-                  identitas dan kelengkapan data pembuat campaign.
+                  Setiap campaign sudah diverifikasi admin sebelum tayang. Admin mengecek dokumen identitas
+                  dan kelengkapan data pembuat campaign.
                 </AccordionItem>
                 <AccordionItem title="Kemana dana jika campaign gagal mencapai target?">
-                  Jika deadline campaign sudah lewat dan target belum tercapai, mode refund otomatis aktif.
-                  Penyelenggara tidak bisa menarik dana lagi, dan donatur bisa klaim refund melalui halaman campaign.
-                  Namun perlu diketahui: jika penyelenggara sudah menarik sebagian dana sebelum deadline
-                  (dengan persetujuan admin), refund yang kamu terima bersifat proporsional — sesuai sisa dana
-                  yang masih ada di kontrak.
+                  Jika deadline lewat dan target belum tercapai, mode refund otomatis aktif.
+                  Penyelenggara tidak bisa menarik dana lagi, dan kamu bisa klaim refund melalui halaman campaign.
+                  Catatan: jika penyelenggara sudah menarik sebagian dana sebelum deadline (dengan persetujuan admin),
+                  refund yang kamu terima bersifat proporsional sesuai sisa dana yang masih ada di kontrak.
                 </AccordionItem>
               </div>
             </div>
@@ -214,19 +202,19 @@ export default function PanduanPage() {
                 <Badge color="purple">Pembuat Campaign</Badge>
               </div>
               <div className="space-y-5">
-                <StepCard number={1} title="Connect Wallet & Lengkapi Profil" desc="Connect wallet kamu, lalu buka halaman Profile. Hubungkan akun Twitter dan Email — ini wajib sebelum bisa membuat campaign." />
-                <StepCard number={2} title="Buka halaman 'Buat Campaign'" desc="Setelah profil lengkap, kamu bisa mengakses halaman pembuatan campaign." />
-                <StepCard number={3} title="Isi info kampanye" desc="Masukkan judul, deskripsi, target dana (ETH), lokasi, durasi, dan link sosial media kamu." />
-                <StepCard number={4} title="Upload gambar kampanye" desc="Pilih gambar yang mewakili kampanyemu. Gambar akan disimpan di IPFS (penyimpanan terdesentralisasi)." />
-                <StepCard number={5} title="Pilih kategori & upload dokumen" desc="Pilih kategori (Yayasan, Perorangan Medis, atau Bencana) dan upload dokumen legitimasi yang diminta." />
-                <StepCard number={6} title="Isi informasi kontak" desc="Masukkan nama PIC, nomor WhatsApp, email, dan alamat lengkap untuk keperluan verifikasi." />
-                <StepCard number={7} title="Submit & tunggu persetujuan" desc="Kampanye kamu akan dikaji oleh admin. Jika disetujui, campaign akan muncul di halaman utama." />
+                <StepCard number={1} title="Connect Wallet dan lengkapi profil" desc="Buka halaman Profile, lalu hubungkan akun Twitter dan Email. Keduanya wajib sebelum bisa membuat campaign." />
+                <StepCard number={2} title="Buka halaman Buat Campaign" desc="Setelah profil lengkap, kamu bisa mengakses halaman pembuatan campaign." />
+                <StepCard number={3} title="Isi info kampanye" desc="Masukkan judul, deskripsi, target dana (ETH), lokasi, durasi, dan link sosial media." />
+                <StepCard number={4} title="Upload gambar kampanye" desc="Pilih gambar yang mewakili kampanyemu. Gambar akan disimpan di IPFS." />
+                <StepCard number={5} title="Pilih kategori dan upload dokumen" desc="Pilih kategori (Yayasan, Perorangan Medis, atau Bencana) dan upload dokumen legitimasi yang diminta." />
+                <StepCard number={6} title="Isi informasi kontak" desc="Masukkan nama PIC, nomor WhatsApp, email, dan alamat untuk keperluan verifikasi." />
+                <StepCard number={7} title="Submit dan tunggu persetujuan" desc="Campaign akan dikaji oleh admin. Jika disetujui, campaign akan muncul di halaman utama." />
               </div>
             </div>
 
             {/* Kategori & Dokumen */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-              <h2 className="text-white font-semibold text-lg mb-4">Kategori & Dokumen yang Dibutuhkan</h2>
+              <h2 className="text-white font-semibold text-lg mb-4">Kategori dan Dokumen yang Dibutuhkan</h2>
               <div className="space-y-4">
                 {[
                   {
@@ -235,12 +223,12 @@ export default function PanduanPage() {
                     docs: ['Akta Pendirian Yayasan (wajib)', 'SK Kemenkumham (wajib)', 'KTP Pengurus (wajib)', 'NPWP Yayasan (opsional)'],
                   },
                   {
-                    label: 'Perorangan — Keluarga Sakit / Medis',
+                    label: 'Perorangan - Keluarga Sakit / Medis',
                     color: 'indigo' as const,
                     docs: ['KTP Pemohon (wajib)', 'Kartu Keluarga (wajib)', 'Surat Keterangan Dokter / Diagnosis (wajib)', 'Foto Kondisi Pasien (opsional)'],
                   },
                   {
-                    label: 'Perorangan — Bencana / Darurat',
+                    label: 'Perorangan - Bencana / Darurat',
                     color: 'amber' as const,
                     docs: ['KTP Pemohon (wajib)', 'Surat Keterangan RT/RW atau Kelurahan (wajib)', 'Foto Kondisi / Lokasi Bencana (wajib)'],
                   },
@@ -264,28 +252,24 @@ export default function PanduanPage() {
               <h2 className="text-white font-semibold text-lg mb-4">FAQ Pembuat Campaign</h2>
               <div className="space-y-3">
                 <AccordionItem title="Berapa lama proses verifikasi?">
-                  Proses verifikasi dilakukan oleh admin secara manual. Biasanya berlangsung 1–3 hari kerja
-                  setelah semua dokumen lengkap dan valid.
+                  Verifikasi dilakukan admin secara manual, biasanya 1-3 hari kerja setelah semua dokumen lengkap.
                 </AccordionItem>
                 <AccordionItem title="Apa yang terjadi jika campaign ditolak?">
-                  Admin akan menolak campaign jika dokumen tidak valid atau tidak memenuhi syarat.
                   Kamu bisa membuat campaign baru dengan dokumen yang diperbaiki.
                 </AccordionItem>
                 <AccordionItem title="Bagaimana cara menarik dana?">
-                  Penyelenggara bisa mengajukan permintaan withdraw kapan saja selama campaign masih berjalan
-                  (sebelum deadline), dengan menyertakan alasan penarikan. Admin akan mereview dan menyetujui
-                  atau menolak permintaan tersebut. Setelah disetujui, penyelenggara bisa mengeksekusi penarikan
-                  dari halaman campaign. Jika deadline sudah lewat dan target tidak tercapai, mode refund aktif
-                  dan withdraw tidak lagi bisa dilakukan.
+                  Kamu bisa mengajukan permintaan withdraw kapan saja selama campaign masih berjalan, dengan
+                  menyertakan alasan penarikan. Admin akan mereview dan menyetujui atau menolak permintaan tersebut.
+                  Setelah disetujui, kamu bisa mengeksekusi penarikan dari halaman campaign.
+                  Jika deadline sudah lewat dan target tidak tercapai, mode refund aktif dan withdraw tidak bisa dilakukan.
                 </AccordionItem>
-                <AccordionItem title="Apa itu IPFS? Kenapa dokumen disimpan di sana?">
-                  IPFS (InterPlanetary File System) adalah sistem penyimpanan terdesentralisasi. File yang
-                  diupload ke IPFS tidak bisa dihapus atau dimanipulasi, sehingga dokumen kampanyemu
-                  terjamin keasliannya secara permanen.
+                <AccordionItem title="Apa itu IPFS?">
+                  IPFS (InterPlanetary File System) adalah sistem penyimpanan terdesentralisasi.
+                  File yang diupload ke IPFS tidak bisa dihapus atau diubah oleh siapapun.
                 </AccordionItem>
                 <AccordionItem title="Apakah ada biaya untuk membuat campaign?">
-                  Membuat campaign memerlukan gas fee kecil untuk menulis data ke blockchain.
-                  Di Sepolia Testnet, ini dibayar dengan ETH testnet yang gratis dari faucet.
+                  Ada gas fee kecil untuk menulis data ke blockchain.
+                  Di Sepolia Testnet, ini dibayar dengan ETH testnet yang bisa didapat gratis dari faucet.
                 </AccordionItem>
               </div>
             </div>
@@ -294,7 +278,6 @@ export default function PanduanPage() {
 
         {/* CTA */}
         <div className="mt-10 text-center">
-          <p className="text-gray-400 text-sm mb-4">Siap untuk mulai?</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/"
               className="px-6 py-2.5 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-sm font-medium shadow-lg shadow-indigo-500/20 transition-all text-center"
