@@ -5,6 +5,7 @@ import { ethers } from 'ethers';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { uploadToPinata, uploadJSONToPinata } from '../utils/uploadToPinata';
 import { FACTORY_ADDRESS } from '../lib/config';
+import TxSuccessModal from '../components/TxSuccessModal';
 
 const CAMPAIGN_ABI = [
   {
@@ -86,6 +87,7 @@ export default function CreateCampaignPage() {
   const [docUrls,      setDocUrls]      = useState<Record<string, string>>({});
   const [docNames,     setDocNames]     = useState<Record<string, string>>({});
   const [docUploading, setDocUploading] = useState<Record<string, boolean>>({});
+  const [txResult, setTxResult] = useState<{ hash: string; label: string } | null>(null);
 
   // Kontak
   const [contact, setContact] = useState({
@@ -233,8 +235,8 @@ export default function CreateCampaignPage() {
         title, desc, imageUrl || '', goalInWei, location, durationInSeconds,
         metadataUrl  // metadata IPFS URL sebagai _social
       );
-      await tx.wait();
-      alert('✅ Kampanye berhasil dibuat! Menunggu persetujuan admin.');
+      const receipt = await tx.wait();
+      setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Kampanye berhasil dibuat! Menunggu persetujuan admin.' });
 
       // Reset form
       setTitle(''); setDesc(''); setGoal(''); setLocation(''); setDuration('');
@@ -253,6 +255,14 @@ export default function CreateCampaignPage() {
   const currentDocs       = category ? DOC_REQUIREMENTS[category] : [];
 
   return (
+    <>
+    {txResult && (
+      <TxSuccessModal
+        hash={txResult.hash}
+        label={txResult.label}
+        onClose={() => setTxResult(null)}
+      />
+    )}
     <div className="max-w-2xl mx-auto mt-10 mb-16 p-6 bg-white rounded-xl shadow text-gray-800">
       <h1 className="text-2xl font-bold mb-6 text-center">Buat Kampanye Donasi</h1>
 
@@ -414,6 +424,7 @@ export default function CreateCampaignPage() {
         </button>
       </form>
     </div>
+    </>
   );
 }
 

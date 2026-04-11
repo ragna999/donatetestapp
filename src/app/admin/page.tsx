@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ethers, Contract, ContractTransactionResponse } from 'ethers';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { RPC, FACTORY_ADDRESS } from '../lib/config';
+import TxSuccessModal from '../components/TxSuccessModal';
 
 const FACTORY_ABI = [
   { name: 'getAllCampaigns', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address[]' }] },
@@ -60,6 +61,7 @@ export default function AdminPage() {
   const [refundableCampaigns,  setRefundableCampaigns]  = useState<RefundableCampaign[]>([]);
 
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  const [txResult, setTxResult] = useState<{ hash: string; label: string } | null>(null);
 
   const rpcProvider = useMemo(() => new ethers.JsonRpcProvider(RPC), []);
 
@@ -91,8 +93,8 @@ export default function AdminPage() {
     return new ethers.BrowserProvider(eip1193).getSigner();
   }
 
-  async function safeTx(p: Promise<ContractTransactionResponse>) {
-    const tx = await p; await tx.wait();
+  async function safeTx(p: Promise<ContractTransactionResponse>): Promise<string> {
+    const tx = await p; const receipt = await tx.wait(); return receipt?.hash ?? tx.hash;
   }
 
   // ─── Loaders ──────────────────────────────────────────────────────────────
@@ -179,7 +181,7 @@ export default function AdminPage() {
   }, [authenticated]);
 
   // ─── Actions ──────────────────────────────────────────────────────────────
-  async function setWithdrawStatusTx(campaignAddr: string, index: number, approve: boolean) {
+  async function setWithdrawStatusTx(campaignAddr: string, index: number, approve: boolean): Promise<string> {
     const signer = await getSigner();
     const c = new Contract(campaignAddr, [
       { name: 'approveWithdraw', type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
@@ -198,34 +200,35 @@ export default function AdminPage() {
     }
     try {
       const tx = approve ? await (c as any).approveWithdraw(idx) : await (c as any).denyWithdraw(idx);
-      await tx.wait();
+      const receipt = await tx.wait();
+      return receipt?.hash ?? tx.hash;
     } catch (e) { throw new Error(errText(e)); }
   }
 
   const handleApproveCampaign = async (address: string) => {
-    try { const s = await getSigner(); const f = new Contract(FACTORY_ADDRESS, FACTORY_ABI, s); await safeTx(f.approveCampaign(address)); alert('✅ Campaign disetujui'); await fetchPendingCampaigns(); }
+    try { const s = await getSigner(); const f = new Contract(FACTORY_ADDRESS, FACTORY_ABI, s); const hash = await safeTx(f.approveCampaign(address)); setTxResult({ hash, label: 'Campaign disetujui!' }); await fetchPendingCampaigns(); }
     catch (e: any) { alert('❌ ' + errText(e)); }
   };
   const handleDenyCampaign = async (address: string) => {
-    try { const s = await getSigner(); const f = new Contract(FACTORY_ADDRESS, FACTORY_ABI, s); await safeTx(f.denyCampaign(address)); alert('⛔ Campaign ditolak'); await fetchPendingCampaigns(); }
+    try { const s = await getSigner(); const f = new Contract(FACTORY_ADDRESS, FACTORY_ABI, s); const hash = await safeTx(f.denyCampaign(address)); setTxResult({ hash, label: 'Campaign ditolak.' }); await fetchPendingCampaigns(); }
     catch (e: any) { alert('❌ ' + errText(e)); }
   };
   const handleApproveWithdraw = async (addr: string, idx: number) => {
-    try { await setWithdrawStatusTx(addr, idx, true); alert('✅ Withdraw disetujui'); await fetchPendingWithdraws(); }
+    try { const hash = await setWithdrawStatusTx(addr, idx, true); setTxResult({ hash, label: 'Withdraw disetujui!' }); await fetchPendingWithdraws(); }
     catch (e: any) { alert('❌ ' + errText(e)); }
   };
   const handleDenyWithdraw = async (addr: string, idx: number) => {
-    try { await setWithdrawStatusTx(addr, idx, false); alert('⛔ Withdraw ditolak'); await fetchPendingWithdraws(); }
+    try { const hash = await setWithdrawStatusTx(addr, idx, false); setTxResult({ hash, label: 'Withdraw ditolak.' }); await fetchPendingWithdraws(); }
     catch (e: any) { alert('❌ ' + errText(e)); }
   };
   const handleCancelCampaign = async (addr: string) => {
     if (!confirm('Batalkan kampanye ini? Donor akan bisa klaim refund.')) return;
-    try { const s = await getSigner(); const c = new Contract(addr, CAMPAIGN_ABI, s); const tx = await (c as any).cancelCampaign(); await tx.wait(); alert('✅ Kampanye dibatalkan'); await fetchRefundableCampaigns(); }
+    try { const s = await getSigner(); const c = new Contract(addr, CAMPAIGN_ABI, s); const tx = await (c as any).cancelCampaign(); const receipt = await tx.wait(); setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Kampanye dibatalkan.' }); await fetchRefundableCampaigns(); }
     catch (e: any) { alert('❌ ' + errText(e)); }
   };
   const handleRefundAll = async (addr: string, donorCount: number) => {
     if (!confirm(`Refund ke ${donorCount} donor sekaligus?`)) return;
-    try { const s = await getSigner(); const c = new Contract(addr, CAMPAIGN_ABI, s); const tx = await (c as any).refundAll(); await tx.wait(); alert('✅ Refund berhasil!'); await fetchRefundableCampaigns(); }
+    try { const s = await getSigner(); const c = new Contract(addr, CAMPAIGN_ABI, s); const tx = await (c as any).refundAll(); const receipt = await tx.wait(); setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Refund berhasil!' }); await fetchRefundableCampaigns(); }
     catch (e: any) { alert('❌ ' + errText(e)); }
   };
 
@@ -266,6 +269,14 @@ export default function AdminPage() {
   );
 
   return (
+    <>
+    {txResult && (
+      <TxSuccessModal
+        hash={txResult.hash}
+        label={txResult.label}
+        onClose={() => setTxResult(null)}
+      />
+    )}
     <div className="min-h-screen bg-[#060d1a] text-white">
 
       {/* Header */}
@@ -473,6 +484,7 @@ export default function AdminPage() {
         )}
       </div>
     </div>
+    </>
   );
 }
 

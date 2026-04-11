@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { ethers, Contract } from 'ethers';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { RPC } from '../../lib/config';
+import TxSuccessModal from '../../components/TxSuccessModal';
 
 const EXPLORER = 'https://sepolia.etherscan.io';
 
@@ -112,6 +113,7 @@ export default function CampaignDetailPage() {
   const [submittingComment, setSubmittingComment] = useState(false);
   const [isRefundable,      setIsRefundable]      = useState(false);
   const [refundAmount,      setRefundAmount]      = useState('0');
+  const [txResult,          setTxResult]          = useState<{ hash: string; label: string } | null>(null);
   const [reports,           setReports]           = useState<Record<number, Report>>({});
   const [reportForms,       setReportForms]       = useState<Record<number, boolean>>({});
   const [reportDraft,       setReportDraft]       = useState<Record<number, { title: string; description: string; amountUsed: string; photoUrl: string; photoUploading: boolean }>>({});
@@ -281,8 +283,9 @@ export default function CampaignDetailPage() {
       const signer   = await bp.getSigner();
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
       const tx       = await contract.donate({ value: ethers.parseEther(donationAmount) });
-      await tx.wait();
-      window.location.reload();
+      const receipt  = await tx.wait();
+      setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Donasi berhasil!' });
+      setDonationAmount('');
     } catch (err: any) {
       alert('Donasi gagal: ' + errText(err));
     } finally { setDonating(false); }
@@ -297,9 +300,10 @@ export default function CampaignDetailPage() {
       const signer   = await bp.getSigner();
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
       const tx       = await contract.requestWithdraw(ethers.parseEther(withdrawAmount), withdrawReason.trim());
-      await tx.wait();
-      alert('Request withdraw terkirim!');
-      window.location.reload();
+      const receipt  = await tx.wait();
+      setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Request withdraw terkirim!' });
+      setWithdrawAmount('');
+      setWithdrawReason('');
     } catch (err: any) {
       alert('Gagal request withdraw: ' + errText(err));
     } finally { setRequesting(false); }
@@ -318,14 +322,13 @@ export default function CampaignDetailPage() {
         try { await (contract as any).executeWithdraw.staticCall(BigInt(i)); chosen = BigInt(i); break; } catch {}
       }
       if (chosen === null) return alert('Tidak ada request yang bisa dieksekusi sekarang.');
-      const tx = await (contract as any).executeWithdraw(chosen);
-      await tx.wait();
+      const tx      = await (contract as any).executeWithdraw(chosen);
+      const receipt = await tx.wait();
       const executed = new Set(executedIds);
       executed.add(Number(chosen));
       setExecutedIds(executed);
       saveExecutedLS(id, executed);
-      alert('Withdraw berhasil!');
-      window.location.reload();
+      setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Withdraw berhasil!' });
     } catch (err: any) {
       alert('Withdraw gagal: ' + errText(err));
     } finally { setWithdrawing(false); }
@@ -347,10 +350,10 @@ export default function CampaignDetailPage() {
       const signer   = await bp.getSigner();
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
       const tx       = await (contract as any).claimRefund();
-      await tx.wait();
+      const receipt  = await tx.wait();
       setRefundClaimed(true);
       setRefundAmount('0');
-      alert('✅ Refund berhasil diklaim!');
+      setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Refund berhasil diklaim!' });
     } catch (err: any) {
       alert('Gagal klaim refund: ' + errText(err));
     } finally {
@@ -540,6 +543,14 @@ export default function CampaignDetailPage() {
     .filter(r => executedIds.has(r.index) || (r.status === 2 && !deniedIds.has(r.index)));
 
   return (
+    <>
+    {txResult && (
+      <TxSuccessModal
+        hash={txResult.hash}
+        label={txResult.label}
+        onClose={() => { setTxResult(null); window.location.reload(); }}
+      />
+    )}
     <div className="min-h-screen bg-[#0a0f1e] text-white" suppressHydrationWarning>
 
       {/* ── Hero Banner ── */}
@@ -996,5 +1007,6 @@ export default function CampaignDetailPage() {
         </a>
       </div>
     </div>
+    </>
   );
 }
