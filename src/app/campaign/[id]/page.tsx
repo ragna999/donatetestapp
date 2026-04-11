@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ethers, Contract } from 'ethers';
+import { usePrivy } from '@privy-io/react-auth';
 import { RPC } from '../../lib/config';
 
 const EXPLORER = 'https://sepolia.etherscan.io';
@@ -79,6 +80,7 @@ export default function CampaignDetailPage() {
   const params   = useParams();
   const id       = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '';
   const provider = useMemo(() => new ethers.JsonRpcProvider(RPC), []);
+  const { user, authenticated } = usePrivy();
 
   const [data,           setData]           = useState<any>(null);
   const [ready,          setReady]          = useState(false);
@@ -149,25 +151,6 @@ export default function CampaignDetailPage() {
         const refundable = await contract.isRefundable();
         setIsRefundable(refundable);
 
-        if ((window as any).ethereum) {
-          try {
-            const bp     = new ethers.BrowserProvider((window as any).ethereum);
-            const signer = await bp.getSigner();
-            const addr   = await signer.getAddress();
-            setCurrentAccount(addr);
-            setIsOwner(addr.toLowerCase() === String(creator).toLowerCase());
-
-            if (refundable) {
-              const [refundAmt, claimed] = await Promise.all([
-                contract.refundAmountFor(addr),
-                contract.refundClaimed(addr),
-              ]);
-              setRefundAmount(ethers.formatEther(refundAmt));
-              setRefundClaimed(claimed);
-            }
-          } catch {}
-        }
-
         setReady(true); // ← halaman tampil sekarang
 
         // Fetch metadata legitimasi jika social adalah IPFS URL
@@ -195,6 +178,31 @@ export default function CampaignDetailPage() {
       }
     })();
   }, [id, provider]);
+
+  // ─── Set currentAccount & isOwner dari Privy ─────────────────────────────
+  useEffect(() => {
+    const addr = user?.wallet?.address ?? '';
+    setCurrentAccount(addr);
+    if (addr && data?.creator) {
+      setIsOwner(addr.toLowerCase() === String(data.creator).toLowerCase());
+    } else {
+      setIsOwner(false);
+    }
+  }, [authenticated, user?.wallet?.address, data?.creator]);
+
+  // ─── Fetch refund amount saat isRefundable & user sudah diketahui ─────────
+  useEffect(() => {
+    const addr = user?.wallet?.address;
+    if (!isRefundable || !addr || !id || !ethers.isAddress(id)) return;
+    const contract = new Contract(id, CAMPAIGN_ABI, provider);
+    Promise.all([
+      contract.refundAmountFor(addr),
+      contract.refundClaimed(addr),
+    ]).then(([refundAmt, claimed]) => {
+      setRefundAmount(ethers.formatEther(refundAmt));
+      setRefundClaimed(claimed);
+    }).catch(() => {});
+  }, [isRefundable, user?.wallet?.address, id, provider]);
 
   // Scan dari ~200k block terakhir saja (bukan dari block 0)
   async function scanWithdrawLogs(campaignAddr: string, reqs: WithdrawRow[]) {
