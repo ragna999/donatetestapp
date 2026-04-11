@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ethers, Contract } from 'ethers';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { RPC } from '../../lib/config';
 
 const EXPLORER = 'https://sepolia.etherscan.io';
@@ -81,6 +81,14 @@ export default function CampaignDetailPage() {
   const id       = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '';
   const provider = useMemo(() => new ethers.JsonRpcProvider(RPC), []);
   const { user, authenticated } = usePrivy();
+  const { wallets } = useWallets();
+
+  async function getEthProvider() {
+    const wallet = wallets[0];
+    if (!wallet) throw new Error('Wallet belum terhubung');
+    const eip1193 = await wallet.getEthereumProvider();
+    return new ethers.BrowserProvider(eip1193);
+  }
 
   const [data,           setData]           = useState<any>(null);
   const [ready,          setReady]          = useState(false);
@@ -261,10 +269,9 @@ export default function CampaignDetailPage() {
   // ─── Actions ─────────────────────────────────────────────────────────────
   async function handleDonate(e: React.FormEvent) {
     e.preventDefault();
-    if (!(window as any).ethereum) return alert('Wallet belum terhubung');
     setDonating(true);
     try {
-      const bp       = new ethers.BrowserProvider((window as any).ethereum);
+      const bp       = await getEthProvider();
       const signer   = await bp.getSigner();
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
       const tx       = await contract.donate({ value: ethers.parseEther(donationAmount) });
@@ -278,10 +285,9 @@ export default function CampaignDetailPage() {
   async function handleRequestWithdraw(e: React.FormEvent) {
     e.preventDefault();
     if (!withdrawAmount || !withdrawReason.trim()) return alert('Isi jumlah & alasan dulu');
-    if (!(window as any).ethereum) return alert('Wallet belum terhubung');
     setRequesting(true);
     try {
-      const bp       = new ethers.BrowserProvider((window as any).ethereum);
+      const bp       = await getEthProvider();
       const signer   = await bp.getSigner();
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
       const tx       = await contract.requestWithdraw(ethers.parseEther(withdrawAmount), withdrawReason.trim());
@@ -296,10 +302,9 @@ export default function CampaignDetailPage() {
   async function handleWithdraw() {
     const approvedIdxs = withdrawals.map((w, i) => w.status === 1 ? i : -1).filter(i => i >= 0);
     if (approvedIdxs.length === 0) return alert('Belum ada request yang disetujui admin');
-    if (!(window as any).ethereum) return alert('Wallet belum terhubung');
     setWithdrawing(true);
     try {
-      const bp       = new ethers.BrowserProvider((window as any).ethereum);
+      const bp       = await getEthProvider();
       const signer   = await bp.getSigner();
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
       let chosen: bigint | null = null;
@@ -330,10 +335,9 @@ export default function CampaignDetailPage() {
 
   // ─── Claim Refund ────────────────────────────────────────────────────────
   async function handleClaimRefund() {
-    if (!(window as any).ethereum) return alert('Wallet belum terhubung');
     setClaiming(true);
     try {
-      const bp       = new ethers.BrowserProvider((window as any).ethereum);
+      const bp       = await getEthProvider();
       const signer   = await bp.getSigner();
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
       const tx       = await (contract as any).claimRefund();
@@ -391,10 +395,9 @@ export default function CampaignDetailPage() {
   async function handleSubmitComment(e: React.FormEvent) {
     e.preventDefault();
     if (!commentText.trim()) return;
-    if (!(window as any).ethereum) return alert('Wallet belum terhubung');
     setSubmittingComment(true);
     try {
-      const bp        = new ethers.BrowserProvider((window as any).ethereum);
+      const bp        = await getEthProvider();
       const signer    = await bp.getSigner();
       const author    = await signer.getAddress();
       const timestamp = Math.floor(Date.now() / 1000);
