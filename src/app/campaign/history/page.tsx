@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ethers, Contract } from 'ethers';
 import Link from 'next/link';
-import { RPC, FACTORY_ADDRESS } from '../../../lib/config';
+import { RPC, FACTORY_ADDRESS } from '../../lib/config';
 
 type CampaignData = {
   address: string;
@@ -152,7 +152,7 @@ export default function CampaignHistoryPage() {
                       <p className="text-xs text-gray-600 mt-1">dari {c.goal} ETH</p>
                     </div>
 
-                    <p className="text-xs text-gray-600 font-mono mt-3 truncate">
+                    <p className="text-xs text-gray-600 mt-3">
                       {new Date(c.deadline * 1000).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </p>
 
