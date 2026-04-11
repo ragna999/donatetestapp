@@ -31,7 +31,7 @@ const CAMPAIGN_ABI = [
 
 // ─── Kategori & Dokumen ────────────────────────────────────────────────────
 
-export const CATEGORY_LABELS: Record<string, string> = {
+const CATEGORY_LABELS: Record<string, string> = {
   yayasan: 'Yayasan / Lembaga Resmi',
   perorangan_medis: 'Perorangan — Keluarga Sakit / Medis',
   perorangan_bencana: 'Perorangan — Bencana / Darurat',
@@ -39,7 +39,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
 
 type DocReq = { key: string; label: string; accept: string; required: boolean };
 
-export const DOC_REQUIREMENTS: Record<string, DocReq[]> = {
+const DOC_REQUIREMENTS: Record<string, DocReq[]> = {
   yayasan: [
     { key: 'akta',        label: 'Akta Pendirian Yayasan',              accept: '.pdf',                       required: true  },
     { key: 'sk',          label: 'SK Kemenkumham',                      accept: '.pdf',                       required: true  },
