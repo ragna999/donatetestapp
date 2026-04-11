@@ -29,6 +29,7 @@ export default function Footer() {
               <li><Link href="/campaign/history" className="hover:text-white transition-colors">Riwayat</Link></li>
               <li><Link href="/profile" className="hover:text-white transition-colors">Profil Saya</Link></li>
               <li><Link href="/create" className="hover:text-white transition-colors">Buat Kampanye</Link></li>
+              <li><Link href="/panduan" className="hover:text-white transition-colors">Panduan</Link></li>
             </ul>
           </div>
 
