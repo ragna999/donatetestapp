@@ -62,6 +62,9 @@ export default function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden sm:flex items-center gap-6">
+            <Link href="/panduan" className="text-sm text-gray-400 hover:text-white transition-colors">
+              Panduan
+            </Link>
             {navLinks.map(l => (
               <Link key={l.href} href={l.href} className="text-sm text-gray-400 hover:text-white transition-colors">
                 {l.label}
@@ -118,6 +121,11 @@ export default function Navbar() {
       {/* Mobile menu */}
       {isOpen && (
         <div className="sm:hidden bg-[#0d1526]/98 backdrop-blur-xl border-t border-white/10 px-4 py-4 space-y-3">
+          <Link href="/panduan" onClick={() => setIsOpen(false)}
+            className="block text-sm text-gray-300 hover:text-white py-2"
+          >
+            Panduan
+          </Link>
           {navLinks.map(l => (
             <Link key={l.href} href={l.href} onClick={() => setIsOpen(false)}
               className="block text-sm text-gray-300 hover:text-white py-2"
