@@ -182,6 +182,13 @@ export default function PanduanPage() {
                   Setiap campaign sudah diverifikasi admin sebelum tayang. Admin mengecek dokumen identitas
                   dan kelengkapan data pembuat campaign.
                 </AccordionItem>
+                <AccordionItem title="Bagaimana saya tahu dana digunakan dengan benar?">
+                  Setiap kali penyelenggara menarik dana, mereka wajib mengunggah laporan penggunaan dana
+                  lengkap dengan foto bukti (misal bukti pembelian atau foto penyerahan bantuan).
+                  Laporan ini bisa dilihat di halaman campaign, terhubung langsung ke masing-masing
+                  penarikan dana, dan ditandatangani secara kriptografis oleh wallet penyelenggara
+                  sehingga tidak bisa dipalsukan.
+                </AccordionItem>
                 <AccordionItem title="Kemana dana jika campaign gagal mencapai target?">
                   Jika deadline lewat dan target belum tercapai, mode refund otomatis aktif.
                   Penyelenggara tidak bisa menarik dana lagi, dan kamu bisa klaim refund melalui halaman campaign.
@@ -209,6 +216,7 @@ export default function PanduanPage() {
                 <StepCard number={5} title="Pilih kategori dan upload dokumen" desc="Pilih kategori (Yayasan, Perorangan Medis, atau Bencana) dan upload dokumen legitimasi yang diminta." />
                 <StepCard number={6} title="Isi informasi kontak" desc="Masukkan nama PIC, nomor WhatsApp, email, dan alamat untuk keperluan verifikasi." />
                 <StepCard number={7} title="Submit dan tunggu persetujuan" desc="Campaign akan dikaji oleh admin. Jika disetujui, campaign akan muncul di halaman utama." />
+                <StepCard number={8} title="Unggah laporan setiap penarikan dana" desc="Setiap kali dana ditarik, unggah laporan penggunaan dana beserta foto bukti di halaman campaign. Laporan ini dilihat publik dan jadi bentuk pertanggungjawaban ke donatur." />
               </div>
             </div>
 
@@ -262,6 +270,13 @@ export default function PanduanPage() {
                   menyertakan alasan penarikan. Admin akan mereview dan menyetujui atau menolak permintaan tersebut.
                   Setelah disetujui, kamu bisa mengeksekusi penarikan dari halaman campaign.
                   Jika deadline sudah lewat dan target tidak tercapai, mode refund aktif dan withdraw tidak bisa dilakukan.
+                </AccordionItem>
+                <AccordionItem title="Apa itu laporan penggunaan dana dan apakah wajib?">
+                  Setelah dana berhasil ditarik, kamu bisa mengunggah laporan yang menjelaskan
+                  dana tersebut digunakan untuk apa, disertai foto bukti. Laporan ini ditandatangani
+                  oleh wallet kamu sehingga terverifikasi dan tidak bisa dipalsukan pihak lain.
+                  Meskipun tidak diwajibkan secara teknis, laporan ini penting untuk menjaga
+                  kepercayaan donatur dan transparansi campaign kamu.
                 </AccordionItem>
                 <AccordionItem title="Apa itu IPFS?">
                   IPFS (InterPlanetary File System) adalah sistem penyimpanan terdesentralisasi.
