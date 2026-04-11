@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ethers, Contract, ContractTransactionResponse } from 'ethers';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { RPC, FACTORY_ADDRESS } from '../lib/config';
 
 const FACTORY_ABI = [
@@ -47,6 +47,7 @@ type RefundableCampaign = { address: string; title: string; image: string; creat
 
 export default function AdminPage() {
   const { ready, authenticated } = usePrivy();
+  const { wallets } = useWallets();
   const [tab, setTab] = useState<Tab>('campaigns');
 
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
@@ -84,9 +85,10 @@ export default function AdminPage() {
   }
 
   async function getSigner() {
-    const eth = (window as any).ethereum;
-    if (!eth) throw new Error('Wallet tidak ditemukan');
-    return new ethers.BrowserProvider(eth).getSigner();
+    const wallet = wallets[0];
+    if (!wallet) throw new Error('Wallet tidak ditemukan');
+    const eip1193 = await wallet.getEthereumProvider();
+    return new ethers.BrowserProvider(eip1193).getSigner();
   }
 
   async function safeTx(p: Promise<ContractTransactionResponse>) {
@@ -178,9 +180,7 @@ export default function AdminPage() {
 
   // ─── Actions ──────────────────────────────────────────────────────────────
   async function setWithdrawStatusTx(campaignAddr: string, index: number, approve: boolean) {
-    const eth = (window as any).ethereum;
-    if (!eth) throw new Error('Wallet tidak ditemukan');
-    const signer = await new ethers.BrowserProvider(eth).getSigner();
+    const signer = await getSigner();
     const c = new Contract(campaignAddr, [
       { name: 'approveWithdraw', type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
       { name: 'denyWithdraw',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },

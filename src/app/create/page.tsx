@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { uploadToPinata, uploadJSONToPinata } from '../utils/uploadToPinata';
 import { FACTORY_ADDRESS } from '../lib/config';
 
@@ -62,6 +63,8 @@ const DOC_REQUIREMENTS: Record<string, DocReq[]> = {
 // ─── Component ────────────────────────────────────────────────────────────
 
 export default function CreateCampaignPage() {
+  const { user } = usePrivy();
+  const { wallets } = useWallets();
   // Info dasar
   const [title,    setTitle]    = useState('');
   const [desc,     setDesc]     = useState('');
@@ -93,11 +96,9 @@ export default function CreateCampaignPage() {
   useEffect(() => {
     (async () => {
       try {
-        const eth = (window as any).ethereum;
-        if (!eth) { setCheckingProfile(false); return; }
-        const accounts: string[] = await eth.request({ method: 'eth_accounts' });
-        if (!accounts || accounts.length === 0) { setCheckingProfile(false); return; }
-        const res  = await fetch(`/api/user-social/${accounts[0]}`);
+        const address = user?.wallet?.address;
+        if (!address) { setCheckingProfile(false); return; }
+        const res  = await fetch(`/api/user-social/${address}`);
         const data = await res.json();
         setHasTwitter(!!data.twitter);
         setHasEmail(!!data.email);
@@ -107,7 +108,7 @@ export default function CreateCampaignPage() {
         setCheckingProfile(false);
       }
     })();
-  }, []);
+  }, [user?.wallet?.address]);
 
   // ─── Upload gambar ───────────────────────────────────────────────────────
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,16 +158,11 @@ export default function CreateCampaignPage() {
     setLoading(true);
 
     try {
-      const eth = (window as any).ethereum;
-      if (!eth) { alert('❌ Wallet tidak ditemukan'); return; }
-
-      const accounts = await eth.request({ method: 'eth_accounts' });
-      if (!accounts || accounts.length === 0) {
-        await eth.request({ method: 'eth_requestAccounts' });
-      }
+      const wallet = wallets[0];
+      if (!wallet) { alert('❌ Wallet tidak ditemukan'); return; }
+      const address = wallet.address;
 
       // Guard profil
-      const address    = accounts[0] || (await eth.request({ method: 'eth_accounts' }))[0];
       const profileRes = await fetch(`/api/user-social/${address}`);
       const profileData = await profileRes.json();
       if (!profileData.twitter || !profileData.email) {
@@ -226,7 +222,8 @@ export default function CreateCampaignPage() {
       const metadataUrl = await uploadJSONToPinata(metadata, `campaign-meta-${Date.now()}`);
 
       // Kirim ke blockchain
-      const provider         = new ethers.BrowserProvider(eth);
+      const eip1193          = await wallet.getEthereumProvider();
+      const provider         = new ethers.BrowserProvider(eip1193);
       const signer           = await provider.getSigner();
       const factory          = new ethers.Contract(FACTORY_ADDRESS, CAMPAIGN_ABI, signer);
       const goalInWei        = ethers.parseEther(goal);
