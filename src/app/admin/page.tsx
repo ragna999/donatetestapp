@@ -40,11 +40,13 @@ const CAMPAIGN_ABI = [
   { name: 'denyWithdraw',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
 ] as const;
 
-type Tab = 'campaigns' | 'withdraws' | 'refunds';
+type Tab = 'campaigns' | 'withdraws' | 'refunds' | 'history';
 
 type PendingCampaign  = { address: string; title: string; image: string; creator: string; metadataUrl?: string };
 type PendingRequest   = { index: number; amount: string; reason: string; timestamp: number; campaign: string; title: string; creator: string };
 type RefundableCampaign = { address: string; title: string; image: string; creator: string; balance: string; donorCount: number; cancelled: boolean; isRefundable: boolean; deadline: number; raised: string; goal: string };
+type HistoryStatus = 'success' | 'expired' | 'cancelled' | 'denied';
+type HistoryCampaign = { address: string; title: string; image: string; creator: string; raised: string; goal: string; deadline: number; status: HistoryStatus };
 
 export default function AdminPage() {
   const { ready, authenticated } = usePrivy();
@@ -59,6 +61,9 @@ export default function AdminPage() {
 
   const [loadingRefunds,       setLoadingRefunds]       = useState(true);
   const [refundableCampaigns,  setRefundableCampaigns]  = useState<RefundableCampaign[]>([]);
+
+  const [loadingHistory,   setLoadingHistory]   = useState(true);
+  const [historyCampaigns, setHistoryCampaigns] = useState<HistoryCampaign[]>([]);
 
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   const [txResult, setTxResult] = useState<{ hash: string; label: string } | null>(null);
@@ -90,7 +95,7 @@ export default function AdminPage() {
     const wallet = wallets[0];
     if (!wallet) throw new Error('Wallet tidak ditemukan');
     const eip1193 = await wallet.getEthereumProvider();
-    return new ethers.BrowserProvider(eip1193).getSigner();
+    return new ethers.BrowserProvider(eip1193).getSigner(wallet.address);
   }
 
   async function safeTx(p: Promise<ContractTransactionResponse>): Promise<string> {
@@ -173,11 +178,60 @@ export default function AdminPage() {
     finally { setLoadingRefunds(false); }
   };
 
+  const fetchHistoryCampaigns = async () => {
+    setLoadingHistory(true);
+    try {
+      const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, rpcProvider);
+      const all: string[] = await factory.getAllCampaigns();
+      const now = Math.floor(Date.now() / 1000);
+      const rows = await Promise.all(all.map(async (addr): Promise<HistoryCampaign | null> => {
+        try {
+          const code = await rpcProvider.getCode(addr);
+          if (code === '0x') return null;
+          const [approved, denied] = await Promise.all([factory.isApproved(addr), factory.deniedCampaigns(addr)]);
+
+          if (denied) {
+            const c = new Contract(addr, CAMPAIGN_ABI, rpcProvider);
+            const [title, image, creator, goalBN, raisedBN, deadlineBN] = await Promise.all([
+              c.title(), c.image(), c.creator(), c.goal(), c.totalDonated(), c.deadline(),
+            ]);
+            return { address: addr, title, image, creator, raised: ethers.formatEther(raisedBN), goal: ethers.formatEther(goalBN), deadline: Number(deadlineBN), status: 'denied' };
+          }
+
+          if (!approved) return null;
+
+          const c = new Contract(addr, CAMPAIGN_ABI, rpcProvider);
+          const [title, image, creator, goalBN, raisedBN, deadlineBN, isCancelled] = await Promise.all([
+            c.title(), c.image(), c.creator(), c.goal(), c.totalDonated(), c.deadline(), c.cancelled(),
+          ]);
+          const balanceBN = await rpcProvider.getBalance(addr);
+          if (balanceBN !== 0n) return null;
+
+          const deadline = Number(deadlineBN);
+          const raised = ethers.formatEther(raisedBN);
+          const goal = ethers.formatEther(goalBN);
+
+          if (isCancelled) return { address: addr, title, image, creator, raised, goal, deadline, status: 'cancelled' };
+
+          const goalMet = raisedBN >= goalBN;
+          const expired = deadline < now;
+          if (goalMet || expired) {
+            return { address: addr, title, image, creator, raised, goal, deadline, status: goalMet ? 'success' : 'expired' };
+          }
+          return null;
+        } catch { return null; }
+      }));
+      setHistoryCampaigns(rows.filter(Boolean) as HistoryCampaign[]);
+    } catch (e) { console.error(e); }
+    finally { setLoadingHistory(false); }
+  };
+
   useEffect(() => {
     if (!authenticated) return;
     fetchPendingCampaigns();
     fetchPendingWithdraws();
     fetchRefundableCampaigns();
+    fetchHistoryCampaigns();
   }, [authenticated]);
 
   // ─── Actions ──────────────────────────────────────────────────────────────
@@ -249,9 +303,10 @@ export default function AdminPage() {
   );
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
-    { key: 'campaigns', label: 'Kampanye',         count: pendingCampaigns.length },
-    { key: 'withdraws', label: 'Withdraw',          count: pendingRequests.length },
-    { key: 'refunds',   label: 'Refund',            count: refundableCampaigns.length },
+    { key: 'campaigns', label: 'Kampanye',  count: pendingCampaigns.length },
+    { key: 'withdraws', label: 'Withdraw',  count: pendingRequests.length },
+    { key: 'refunds',   label: 'Refund',    count: refundableCampaigns.length },
+    { key: 'history',   label: 'Riwayat',   count: historyCampaigns.length },
   ];
 
   const Skeleton = () => (
@@ -482,6 +537,75 @@ export default function AdminPage() {
             )}
           </div>
         )}
+        {/* ── Tab: Riwayat ── */}
+        {tab === 'history' && (
+          <div>
+            <h2 className="text-base font-semibold text-gray-300 mb-2">Riwayat Kampanye</h2>
+            <p className="text-sm text-gray-500 mb-6">Kampanye yang sudah selesai, ditolak, dibatalkan, atau dananya sudah kosong.</p>
+
+            {loadingHistory ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {[...Array(3)].map((_, i) => <Skeleton key={i} />)}
+              </div>
+            ) : historyCampaigns.length === 0 ? (
+              <EmptyState icon="📭" message="Belum ada riwayat kampanye" />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {historyCampaigns.map(c => {
+                  const statusMap: Record<HistoryStatus, { label: string; bg: string; text: string; border: string }> = {
+                    success:   { label: '✅ Berhasil',   bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+                    expired:   { label: '⏰ Berakhir',   bg: 'bg-gray-500/10',    text: 'text-gray-400',    border: 'border-gray-500/30'    },
+                    cancelled: { label: '🚫 Dibatalkan', bg: 'bg-orange-500/10',  text: 'text-orange-400',  border: 'border-orange-500/30'  },
+                    denied:    { label: '❌ Ditolak',    bg: 'bg-red-500/10',     text: 'text-red-400',     border: 'border-red-500/30'     },
+                  };
+                  const s = statusMap[c.status];
+                  const deadlineStr = new Date(c.deadline * 1000).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+                  const pct = Number(c.goal) > 0 ? Math.min(100, Math.round((Number(c.raised) / Number(c.goal)) * 100)) : 0;
+                  return (
+                    <div key={c.address} className={`bg-[#0d1526] border ${s.border} rounded-2xl overflow-hidden transition-all hover:border-opacity-60`}>
+                      <div className="relative h-32 bg-gradient-to-br from-slate-800 to-slate-900">
+                        {c.image ? (
+                          <img src={c.image} alt={c.title} className="w-full h-full object-cover opacity-50" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-3xl opacity-10">🌱</div>
+                        )}
+                        <div className="absolute top-2 right-2">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.bg} ${s.text} border ${s.border}`}>
+                            {s.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-4">
+                        <h3 className="font-semibold text-white text-sm line-clamp-1 mb-1">{c.title}</h3>
+                        <p className="text-xs text-gray-600 font-mono truncate mb-3">👤 {c.creator}</p>
+
+                        <div className="space-y-1 mb-3">
+                          <div className="flex justify-between text-xs text-gray-400">
+                            <span>Terkumpul</span>
+                            <span className="text-white font-medium">{Number(c.raised).toFixed(4)} ETH</span>
+                          </div>
+                          <div className="w-full bg-white/5 rounded-full h-1.5">
+                            <div className="h-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500" style={{ width: `${pct}%` }} />
+                          </div>
+                          <div className="flex justify-between text-xs text-gray-500">
+                            <span>{pct}% dari {Number(c.goal).toFixed(2)} ETH</span>
+                            <span>Berakhir {deadlineStr}</span>
+                          </div>
+                        </div>
+
+                        <Link href={`/campaign/${c.address}`} className="block text-center text-xs text-indigo-400 hover:text-indigo-300 pt-1">
+                          Lihat Detail →
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
     </>
