@@ -277,10 +277,17 @@ export default function LaporanPage() {
                         rel="noopener noreferrer"
                         className="mt-2 inline-flex items-center gap-1.5 text-xs text-green-400 hover:text-green-300 font-mono transition"
                       >
-                        ✅ Bukti transaksi: {txHash.slice(0, 22)}...{txHash.slice(-6)} ↗
+                        ✅ Verifikasi transaksi ↗
                       </a>
                     ) : (
-                      <span className="mt-2 inline-block text-xs text-gray-600 italic">Txhash tidak tersedia (di luar rentang scan)</span>
+                      <a
+                        href={`${EXPLORER}/address/${id}#internaltx`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-indigo-400 font-mono transition"
+                      >
+                        🔍 Lihat riwayat kontrak di Etherscan ↗
+                      </a>
                     )}
                   </div>
 

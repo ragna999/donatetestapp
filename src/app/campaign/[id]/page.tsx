@@ -702,15 +702,26 @@ export default function CampaignDetailPage() {
                       <span className={`text-xs px-2 py-1 rounded-full border ${s.cls}`}>{s.text}</span>
                     </div>
                     <p className="text-xs text-gray-500">🕒 {new Date(r.timestamp * 1000).toLocaleString()}</p>
-                    {isWithdrawn && txHash && (
-                      <a
-                        href={`${EXPLORER}/tx/${txHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300 font-mono transition"
-                      >
-                        ✅ Bukti transaksi: {txHash.slice(0, 18)}...{txHash.slice(-6)} ↗
-                      </a>
+                    {isWithdrawn && (
+                      txHash ? (
+                        <a
+                          href={`${EXPLORER}/tx/${txHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300 font-mono transition"
+                        >
+                          ✅ Verifikasi transaksi ↗
+                        </a>
+                      ) : (
+                        <a
+                          href={`${EXPLORER}/address/${id}#internaltx`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-indigo-400 font-mono transition"
+                        >
+                          🔍 Lihat riwayat kontrak di Etherscan ↗
+                        </a>
+                      )
                     )}
                   </li>
                 );
