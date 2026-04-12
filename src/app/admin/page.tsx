@@ -316,7 +316,7 @@ export default function AdminPage() {
   };
   const handleCancelCampaign = async (addr: string) => {
     if (!confirm('Batalkan kampanye ini? Donor akan bisa klaim refund.')) return;
-    try { const s = await getSigner(); const c = new Contract(addr, CAMPAIGN_ABI, s); const tx = await (c as any).cancelCampaign(); const receipt = await tx.wait(); setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Kampanye dibatalkan.' }); await Promise.all([fetchActiveCampaigns(), fetchRefundableCampaigns()]); }
+    try { const s = await getSigner(); const c = new Contract(addr, CAMPAIGN_ABI, s); const tx = await (c as any).cancelCampaign(); const receipt = await tx.wait(); setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Kampanye dibatalkan.' }); await Promise.all([fetchActiveCampaigns(), fetchRefundableCampaigns(), fetchHistoryCampaigns()]); }
     catch (e: any) { alert('❌ ' + errText(e)); }
   };
   const handleRefundAll = async (addr: string, donorCount: number) => {
