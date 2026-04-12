@@ -169,8 +169,8 @@ export default function AdminPage() {
             c.title(), c.image(), c.creator(), c.goal(), c.totalDonated(), c.deadline(), c.cancelled(), c.isRefundable(), c.getDonorCount(),
           ]);
           const balanceBN = await rpcProvider.getBalance(addr);
-          if (!refundable && balanceBN === 0n) return null;
-          if (isCancelled && balanceBN === 0n) return null; // refund sudah selesai → tampil di Riwayat saja
+          if (!refundable) return null;                     // bukan mode refund → tidak perlu di sini
+          if (balanceBN === 0n) return null;                // dana sudah kosong → tampil di Riwayat saja
           return {
             address: addr, title, image, creator, balance: ethers.formatEther(balanceBN),
             donorCount: Number(donorCountBN), cancelled: isCancelled, isRefundable: refundable,
@@ -200,8 +200,10 @@ export default function AdminPage() {
             c.title(), c.image(), c.creator(), c.goal(), c.totalDonated(), c.deadline(), c.cancelled(), c.getDonorCount(),
           ]);
           if (isCancelled) return null;
-          if (Number(deadlineBN) < now) return null;
           const balanceBN = await rpcProvider.getBalance(addr);
+          const goalMet = raisedBN >= goalBN;
+          // Tetap tampilkan di Aktif jika: deadline belum habis, ATAU goal tercapai tapi masih ada sisa dana
+          if (Number(deadlineBN) < now && !(goalMet && balanceBN > 0n)) return null;
           return {
             address: addr, title, image, creator,
             raised: ethers.formatEther(raisedBN), goal: ethers.formatEther(goalBN),
