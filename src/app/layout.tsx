@@ -24,6 +24,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           config={{
             loginMethods: ['wallet', 'email', 'twitter'],
             appearance: { theme: 'dark' },
+            embeddedWallets: { createOnLogin: 'users-without-wallets' },
           }}
         >
           <Navbar />
