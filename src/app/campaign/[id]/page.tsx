@@ -48,7 +48,6 @@ const CAMPAIGN_ABI = [
 type DonationRow  = { donor: string; amount: string };
 type WithdrawRow  = { amount: string; reason: string; timestamp: number; status: number };
 type Comment      = { cid: string; campaignAddress: string; author: string; text: string; timestamp: number; signature: string; verified: boolean };
-type Report       = { cid: string; withdrawIndex: number; title: string; description: string; amountUsed: string; photoUrl: string; timestamp: number; creator: string; verified: boolean };
 
 function errText(err: any): string {
   const nested = err?.info?.error?.message || err?.data?.message || err?.cause?.message || err?.shortMessage || err?.reason || err?.message;
@@ -114,10 +113,7 @@ export default function CampaignDetailPage() {
   const [isRefundable,      setIsRefundable]      = useState(false);
   const [refundAmount,      setRefundAmount]      = useState('0');
   const [txResult,          setTxResult]          = useState<{ hash: string; label: string } | null>(null);
-  const [reports,           setReports]           = useState<Record<number, Report>>({});
-  const [reportForms,       setReportForms]       = useState<Record<number, boolean>>({});
-  const [reportDraft,       setReportDraft]       = useState<Record<number, { title: string; description: string; amountUsed: string; photoUrl: string; photoUploading: boolean }>>({});
-  const [submittingReport,  setSubmittingReport]  = useState<Record<number, boolean>>({});
+  const [executedTxHashes,  setExecutedTxHashes]  = useState<Record<number, string>>({});
   const [refundClaimed,     setRefundClaimed]     = useState(false);
   const [claiming,          setClaiming]          = useState(false);
   const [metadata,          setMetadata]          = useState<any>(null);
@@ -176,14 +172,14 @@ export default function CampaignDetailPage() {
             .catch(() => {});
         }
 
-        // Fetch komentar & laporan dari IPFS di background
+        // Fetch komentar dari IPFS di background
         fetchComments(id).catch(() => {});
-        fetchReports(id).catch(() => {});
 
         // Scan logs di background (tidak blokir render)
-        scanWithdrawLogs(id, reqs).then(({ execSet, denySet }) => {
+        scanWithdrawLogs(id, reqs).then(({ execSet, denySet, txHashMap }) => {
           setExecutedIds(execSet);
           setDeniedIds(denySet);
+          setExecutedTxHashes(txHashMap);
         }).catch(() => {
           setExecutedIds(loadExecutedLS(id));
         });
@@ -235,12 +231,13 @@ export default function CampaignDetailPage() {
 
     const execSet  = new Set<number>(loadExecutedLS(campaignAddr));
     const denySet  = new Set<number>();
+    const txHashMap: Record<number, string> = {};
 
     const decode = (lg: any) => {
       try { const [n] = ethers.AbiCoder.defaultAbiCoder().decode(['uint256'], lg.data); return Number(n); } catch { return null; }
     };
 
-    for (const lg of logsExec)  { const n = decode(lg); if (n !== null) execSet.add(n); }
+    for (const lg of logsExec)  { const n = decode(lg); if (n !== null) { execSet.add(n); txHashMap[n] = lg.transactionHash; } }
     for (const lg of logsDenied) { const n = decode(lg); if (n !== null) denySet.add(n); }
 
     // staticCall fallback untuk status=2 yang belum teridentifikasi
@@ -256,7 +253,7 @@ export default function CampaignDetailPage() {
       }
     }
 
-    return { execSet, denySet };
+    return { execSet, denySet, txHashMap };
   }
 
   // ─── Countdown ───────────────────────────────────────────────────────────
@@ -439,78 +436,6 @@ export default function CampaignDetailPage() {
       alert('Gagal kirim komentar: ' + errText(err));
     } finally {
       setSubmittingComment(false);
-    }
-  }
-
-  // ─── Reports ─────────────────────────────────────────────────────────────
-  async function fetchReports(campaignAddr: string) {
-    try {
-      const res = await fetch(`/api/pinata/reports?campaignAddress=${campaignAddr.toLowerCase()}`);
-      const data = await res.json();
-      const rows: any[] = data.rows ?? [];
-      const map: Record<number, Report> = {};
-      await Promise.all(rows.map(async (pin: any) => {
-        try {
-          const r = await fetch(`https://gateway.pinata.cloud/ipfs/${pin.ipfs_pin_hash}`);
-          const json = await r.json();
-          const message = `report:${json.campaignAddress}|withdrawIndex:${json.withdrawIndex}|title:${json.title}|timestamp:${json.timestamp}`;
-          let verified = false;
-          try {
-            const recovered = ethers.verifyMessage(message, json.signature);
-            verified = recovered.toLowerCase() === json.creator.toLowerCase();
-          } catch {}
-          map[json.withdrawIndex] = { ...json, cid: pin.ipfs_pin_hash, verified };
-        } catch {}
-      }));
-      setReports(map);
-    } catch (e) {
-      console.error('Gagal fetch laporan:', e);
-    }
-  }
-
-  async function handleSubmitReport(withdrawIndex: number) {
-    const draft = reportDraft[withdrawIndex];
-    if (!draft?.title.trim() || !draft?.description.trim() || !draft?.photoUrl) {
-      return alert('Lengkapi judul, deskripsi, dan foto bukti.');
-    }
-    setSubmittingReport(prev => ({ ...prev, [withdrawIndex]: true }));
-    try {
-      const bp        = await getEthProvider();
-      const signer    = await bp.getSigner();
-      const creator   = await signer.getAddress();
-      const timestamp = Math.floor(Date.now() / 1000);
-      const message   = `report:${id.toLowerCase()}|withdrawIndex:${withdrawIndex}|title:${draft.title.trim()}|timestamp:${timestamp}`;
-      const signature = await signer.signMessage(message);
-
-      const report = {
-        campaignAddress: id.toLowerCase(),
-        withdrawIndex,
-        title:       draft.title.trim(),
-        description: draft.description.trim(),
-        amountUsed:  draft.amountUsed.trim(),
-        photoUrl:    draft.photoUrl,
-        timestamp,
-        creator,
-        signature,
-      };
-
-      const res = await fetch('/api/pinata/reports', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ report, campaignAddress: id.toLowerCase(), withdrawIndex }),
-      });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? `Error ${res.status}`);
-      }
-
-      setReportForms(prev => ({ ...prev, [withdrawIndex]: false }));
-      await fetchReports(id);
-    } catch (err: any) {
-      alert('Gagal kirim laporan: ' + errText(err));
-    } finally {
-      setSubmittingReport(prev => ({ ...prev, [withdrawIndex]: false }));
     }
   }
 
@@ -751,10 +676,22 @@ export default function CampaignDetailPage() {
         {/* ── Withdraw Requests ── */}
         {withdrawals.length > 0 && (
           <div className="bg-[#111827] border border-white/10 rounded-2xl p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4">📤 Permintaan Penarikan</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">📤 Permintaan Penarikan</h2>
+              {withdrawnHistory.length > 0 && (
+                <a
+                  href={`/campaign/${id}/laporan`}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 border border-indigo-500/30 hover:border-indigo-400/50 bg-indigo-500/10 hover:bg-indigo-500/20 px-3 py-1.5 rounded-lg transition"
+                >
+                  📊 Lihat Laporan Penggunaan Dana →
+                </a>
+              )}
+            </div>
             <ul className="space-y-3">
               {withdrawals.map((r, i) => {
                 const s = statusLabel(i, r);
+                const isWithdrawn = executedIds.has(i) || (r.status === 2 && !deniedIds.has(i));
+                const txHash = executedTxHashes[i];
                 return (
                   <li key={i} className="bg-white/5 rounded-xl p-4 text-sm space-y-2">
                     <div className="flex justify-between items-start">
@@ -765,156 +702,16 @@ export default function CampaignDetailPage() {
                       <span className={`text-xs px-2 py-1 rounded-full border ${s.cls}`}>{s.text}</span>
                     </div>
                     <p className="text-xs text-gray-500">🕒 {new Date(r.timestamp * 1000).toLocaleString()}</p>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
-
-        {/* ── Riwayat Withdraw + Laporan Dana ── */}
-        {withdrawnHistory.length > 0 && (
-          <div className="bg-[#111827] border border-white/10 rounded-2xl p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4">📋 Laporan Penggunaan Dana</h2>
-            <ul className="space-y-4">
-              {withdrawnHistory.map(r => {
-                const report   = reports[r.index];
-                const formOpen = reportForms[r.index] ?? false;
-                const draft    = reportDraft[r.index] ?? { title: '', description: '', amountUsed: r.amount, photoUrl: '', photoUploading: false };
-                const submitting = submittingReport[r.index] ?? false;
-
-                return (
-                  <li key={`wd-${r.index}`} className="border border-white/10 rounded-xl overflow-hidden">
-                    {/* Header withdraw */}
-                    <div className="bg-white/5 px-4 py-3 flex justify-between items-center text-sm">
-                      <div>
-                        <span className="font-semibold text-white">{r.amount} ETH</span>
-                        <span className="text-gray-400 ml-2 italic">"{r.reason}"</span>
-                      </div>
-                      <span className="text-xs text-gray-500">{new Date(r.timestamp * 1000).toLocaleDateString()}</span>
-                    </div>
-
-                    <div className="p-4">
-                      {report ? (
-                        /* ── Laporan ada ── */
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs bg-green-500/20 text-green-300 border border-green-500/30 px-2 py-0.5 rounded-full">
-                              {report.verified ? '✓ Terverifikasi' : 'Laporan'}
-                            </span>
-                            <span className="text-xs text-gray-500">{new Date(report.timestamp * 1000).toLocaleDateString()}</span>
-                          </div>
-                          <p className="text-white font-medium text-sm">{report.title}</p>
-                          {report.amountUsed && (
-                            <p className="text-xs text-gray-400">Dana digunakan: <span className="text-white font-medium">{report.amountUsed} ETH</span></p>
-                          )}
-                          <p className="text-gray-300 text-sm leading-relaxed">{report.description}</p>
-                          {report.photoUrl && (
-                            <a href={report.photoUrl} target="_blank" rel="noopener noreferrer">
-                              <img
-                                src={report.photoUrl}
-                                alt="Bukti penggunaan dana"
-                                className="w-full max-h-64 object-cover rounded-lg border border-white/10 hover:opacity-90 transition"
-                              />
-                            </a>
-                          )}
-                        </div>
-                      ) : isOwner && !formOpen ? (
-                        /* ── Creator, belum ada laporan, form belum buka ── */
-                        <button
-                          onClick={() => setReportForms(prev => ({ ...prev, [r.index]: true }))}
-                          className="w-full py-2.5 border border-dashed border-white/20 hover:border-indigo-500/50 text-gray-400 hover:text-indigo-300 text-sm rounded-xl transition"
-                        >
-                          + Tambah Laporan Penggunaan Dana
-                        </button>
-                      ) : isOwner && formOpen ? (
-                        /* ── Creator, form terbuka ── */
-                        <div className="space-y-3">
-                          <input
-                            type="text"
-                            placeholder="Judul laporan"
-                            value={draft.title}
-                            onChange={e => setReportDraft(prev => ({ ...prev, [r.index]: { ...draft, title: e.target.value } }))}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-indigo-500 text-sm"
-                          />
-                          <textarea
-                            placeholder="Deskripsi penggunaan dana"
-                            rows={3}
-                            value={draft.description}
-                            onChange={e => setReportDraft(prev => ({ ...prev, [r.index]: { ...draft, description: e.target.value } }))}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-indigo-500 text-sm resize-none"
-                          />
-                          <input
-                            type="number"
-                            step="any"
-                            placeholder={`Jumlah ETH yang dipakai (maks ${r.amount} ETH)`}
-                            value={draft.amountUsed}
-                            onChange={e => setReportDraft(prev => ({ ...prev, [r.index]: { ...draft, amountUsed: e.target.value } }))}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-indigo-500 text-sm"
-                          />
-                          {/* Upload foto bukti */}
-                          <div>
-                            <label className="block text-xs text-gray-400 mb-1.5">Foto bukti <span className="text-red-400">*</span></label>
-                            {draft.photoUrl ? (
-                              <div className="relative">
-                                <img src={draft.photoUrl} alt="Preview" className="w-full max-h-48 object-cover rounded-lg border border-white/10" />
-                                <button
-                                  type="button"
-                                  onClick={() => setReportDraft(prev => ({ ...prev, [r.index]: { ...draft, photoUrl: '' } }))}
-                                  className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white text-xs px-2 py-1 rounded-lg"
-                                >
-                                  Ganti
-                                </button>
-                              </div>
-                            ) : (
-                              <div>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  disabled={draft.photoUploading}
-                                  onChange={async (e) => {
-                                    const file = e.target.files?.[0];
-                                    if (!file) return;
-                                    setReportDraft(prev => ({ ...prev, [r.index]: { ...draft, photoUploading: true } }));
-                                    try {
-                                      const fd = new FormData();
-                                      fd.append('file', file);
-                                      const res = await fetch('/api/pinata/upload', { method: 'POST', body: fd });
-                                      const data = await res.json();
-                                      if (!res.ok) throw new Error(data.error);
-                                      setReportDraft(prev => ({ ...prev, [r.index]: { ...draft, photoUrl: data.url, photoUploading: false } }));
-                                    } catch {
-                                      alert('Upload foto gagal');
-                                      setReportDraft(prev => ({ ...prev, [r.index]: { ...draft, photoUploading: false } }));
-                                    }
-                                  }}
-                                  className="w-full text-sm text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-white/10 file:text-gray-300 hover:file:bg-white/20"
-                                />
-                                {draft.photoUploading && <p className="text-xs text-blue-400 mt-1">Mengupload foto...</p>}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleSubmitReport(r.index)}
-                              disabled={submitting || draft.photoUploading}
-                              className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition"
-                            >
-                              {submitting ? '⏳ Mengirim...' : 'Kirim Laporan'}
-                            </button>
-                            <button
-                              onClick={() => setReportForms(prev => ({ ...prev, [r.index]: false }))}
-                              className="px-4 py-2.5 border border-white/10 hover:border-white/30 text-gray-400 hover:text-white text-sm rounded-xl transition"
-                            >
-                              Batal
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        /* ── Bukan creator, belum ada laporan ── */
-                        <p className="text-xs text-gray-500 italic">Belum ada laporan dari penyelenggara.</p>
-                      )}
-                    </div>
+                    {isWithdrawn && txHash && (
+                      <a
+                        href={`${EXPLORER}/tx/${txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300 font-mono transition"
+                      >
+                        ✅ Bukti transaksi: {txHash.slice(0, 18)}...{txHash.slice(-6)} ↗
+                      </a>
+                    )}
                   </li>
                 );
               })}
