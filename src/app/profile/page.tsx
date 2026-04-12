@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import { ethers, Contract } from 'ethers';
 import Link from 'next/link';
 import { RPC, FACTORY_ADDRESS } from '../lib/config';
+import TxSuccessModal from '../components/TxSuccessModal';
 
 const FACTORY_ABI = [
   { name: 'getAllCampaigns',    type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address[]' }] },
@@ -23,11 +24,21 @@ const CAMPAIGN_ABI = [
 
 export default function ProfilePage() {
   const { user, ready, authenticated, login, linkTwitter, linkEmail } = usePrivy();
+  const { wallets } = useWallets();
   const router = useRouter();
 
   const [campaigns,        setCampaigns]        = useState<any[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
   const [imgErrors,        setImgErrors]        = useState<Record<string, boolean>>({});
+
+  // ─── Wallet state ────────────────────────────────────────────────────────
+  const [balance,      setBalance]      = useState<string | null>(null);
+  const [copied,       setCopied]       = useState(false);
+  const [sendTo,       setSendTo]       = useState('');
+  const [sendAmount,   setSendAmount]   = useState('');
+  const [sending,      setSending]      = useState(false);
+  const [sendError,    setSendError]    = useState('');
+  const [txResult,     setTxResult]     = useState<{ hash: string; label: string } | null>(null);
 
   useEffect(() => {
     if (!authenticated || !user?.wallet?.address) return;
@@ -60,6 +71,45 @@ export default function ProfilePage() {
     })();
   }, [authenticated, user]);
 
+  // Fetch ETH balance
+  useEffect(() => {
+    if (!user?.wallet?.address) return;
+    const provider = new ethers.JsonRpcProvider(RPC);
+    provider.getBalance(user.wallet.address)
+      .then(b => setBalance(ethers.formatEther(b)))
+      .catch(() => setBalance('0'));
+  }, [user?.wallet?.address]);
+
+  async function handleSend() {
+    setSendError('');
+    if (!ethers.isAddress(sendTo)) { setSendError('Alamat tujuan tidak valid'); return; }
+    const amt = parseFloat(sendAmount);
+    if (isNaN(amt) || amt <= 0) { setSendError('Jumlah tidak valid'); return; }
+    const wallet = wallets[0];
+    if (!wallet) { setSendError('Wallet tidak ditemukan'); return; }
+    setSending(true);
+    try {
+      const eip1193 = await wallet.getEthereumProvider();
+      const signer  = await new ethers.BrowserProvider(eip1193).getSigner(wallet.address);
+      const tx      = await signer.sendTransaction({ to: sendTo, value: ethers.parseEther(sendAmount) });
+      const receipt = await tx.wait();
+      setTxResult({ hash: receipt?.hash ?? tx.hash, label: `Berhasil kirim ${sendAmount} ETH!` });
+      setSendTo(''); setSendAmount('');
+      // refresh balance
+      const provider = new ethers.JsonRpcProvider(RPC);
+      provider.getBalance(wallet.address).then(b => setBalance(ethers.formatEther(b)));
+    } catch (e: any) {
+      setSendError(e?.shortMessage || e?.message || 'Transaksi gagal');
+    } finally { setSending(false); }
+  }
+
+  function copyAddress() {
+    if (!user?.wallet?.address) return;
+    navigator.clipboard.writeText(user.wallet.address);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   if (!ready) return (
     <div className="min-h-screen bg-[#060d1a] flex items-center justify-center">
       <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
@@ -89,6 +139,8 @@ export default function ProfilePage() {
   const canCreate     = emailVerified && twitterVerified;
 
   return (
+    <>
+    {txResult && <TxSuccessModal hash={txResult.hash} label={txResult.label} onClose={() => setTxResult(null)} />}
     <div className="min-h-screen bg-[#060d1a] text-white">
 
       {/* Header */}
@@ -106,6 +158,74 @@ export default function ProfilePage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-10 space-y-6">
+
+        {/* ── Wallet Card ── */}
+        <div className="bg-gradient-to-br from-indigo-900/30 to-purple-900/20 border border-indigo-500/20 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-gray-300">Wallet Saya</h2>
+            <span className="text-xs text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full">Sepolia Testnet</span>
+          </div>
+
+          {/* Address + balance */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Alamat</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-mono text-white break-all">{user?.wallet?.address}</p>
+                <button onClick={copyAddress}
+                  className="shrink-0 text-xs px-2 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition text-gray-400 hover:text-white">
+                  {copied ? '✓ Disalin' : 'Salin'}
+                </button>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-xs text-gray-500 mb-1">Saldo</p>
+              <p className="text-xl font-bold text-white">
+                {balance === null ? '...' : `${Number(balance).toFixed(4)} ETH`}
+              </p>
+            </div>
+          </div>
+
+          {/* Deposit info */}
+          <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 mb-4">
+            <p className="text-xs text-blue-300 font-medium mb-1">Cara deposit Sepolia ETH</p>
+            <p className="text-xs text-gray-400 mb-2">Salin alamat wallet di atas, lalu kunjungi faucet dan masukkan alamat tersebut.</p>
+            <div className="flex flex-wrap gap-2">
+              <a href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia" target="_blank" rel="noopener noreferrer"
+                className="text-xs px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 text-blue-300 rounded-lg transition">
+                Google Faucet ↗
+              </a>
+              <a href="https://faucets.chain.link/sepolia" target="_blank" rel="noopener noreferrer"
+                className="text-xs px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 text-blue-300 rounded-lg transition">
+                Chainlink Faucet ↗
+              </a>
+            </div>
+          </div>
+
+          {/* Kirim ETH */}
+          <div>
+            <p className="text-xs text-gray-500 font-medium mb-2">Kirim ETH</p>
+            <div className="space-y-2">
+              <input
+                type="text" placeholder="Alamat tujuan (0x...)"
+                value={sendTo} onChange={e => setSendTo(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 focus:border-indigo-500/50 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none transition font-mono"
+              />
+              <div className="flex gap-2">
+                <input
+                  type="number" placeholder="Jumlah ETH" min="0" step="0.0001"
+                  value={sendAmount} onChange={e => setSendAmount(e.target.value)}
+                  className="flex-1 bg-white/5 border border-white/10 focus:border-indigo-500/50 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none transition"
+                />
+                <button onClick={handleSend} disabled={sending || !sendTo || !sendAmount}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-xl transition">
+                  {sending ? 'Mengirim...' : 'Kirim'}
+                </button>
+              </div>
+              {sendError && <p className="text-xs text-red-400">{sendError}</p>}
+            </div>
+          </div>
+        </div>
 
         {/* Verifikasi Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -224,5 +344,6 @@ export default function ProfilePage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
