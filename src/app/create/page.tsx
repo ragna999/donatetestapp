@@ -206,6 +206,7 @@ export default function CreateCampaignPage() {
       };
 
       const metadataUrl       = await uploadJSONToPinata(metadata, `campaign-meta-${Date.now()}`);
+      await wallet.switchChain(11155111);
       const eip1193           = await wallet.getEthereumProvider();
       const provider          = new ethers.BrowserProvider(eip1193);
       const signer            = await provider.getSigner();

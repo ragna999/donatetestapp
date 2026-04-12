@@ -87,6 +87,7 @@ export default function CampaignDetailPage() {
   async function getEthProvider() {
     const wallet = wallets[0];
     if (!wallet) throw new Error('Wallet belum terhubung');
+    await wallet.switchChain(11155111);
     const eip1193 = await wallet.getEthereumProvider();
     return new ethers.BrowserProvider(eip1193);
   }

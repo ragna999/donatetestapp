@@ -89,6 +89,7 @@ export default function ProfilePage() {
     if (!wallet) { setSendError('Wallet tidak ditemukan'); return; }
     setSending(true);
     try {
+      await wallet.switchChain(11155111);
       const eip1193 = await wallet.getEthereumProvider();
       const signer  = await new ethers.BrowserProvider(eip1193).getSigner(wallet.address);
       const tx      = await signer.sendTransaction({ to: sendTo, value: ethers.parseEther(sendAmount) });

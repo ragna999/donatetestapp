@@ -3,6 +3,7 @@
 import './globals.css';
 import { ReactNode, useEffect } from 'react';
 import { PrivyProvider } from '@privy-io/react-auth';
+import { sepolia } from 'viem/chains';
 import Navbar from './components/navbar';
 import Footer from './components/footer';
 
@@ -25,6 +26,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             loginMethods: ['wallet', 'email', 'twitter'],
             appearance: { theme: 'dark' },
             embeddedWallets: { createOnLogin: 'users-without-wallets' },
+            defaultChain: sepolia,
+            supportedChains: [sepolia],
           }}
         >
           <Navbar />
