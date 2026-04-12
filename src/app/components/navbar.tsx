@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ethers } from 'ethers';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useCreateWallet } from '@privy-io/react-auth';
 import { RPC, ADMIN_MANAGER_ADDRESS } from '../lib/config';
 
 const ADMIN_ABI = [
@@ -12,6 +12,7 @@ const ADMIN_ABI = [
 
 export default function Navbar() {
   const { user, authenticated, ready, login, logout } = usePrivy();
+  const { createWallet } = useCreateWallet();
   const [isOpen,   setIsOpen]   = useState(false);
   const [isAdmin,  setIsAdmin]  = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -25,6 +26,13 @@ export default function Navbar() {
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => {
+    if (!authenticated || !ready) return;
+    if (!user?.wallet?.address) {
+      createWallet().catch(() => {});
+    }
+  }, [authenticated, ready, user?.wallet?.address]);
 
   useEffect(() => {
     if (!authenticated || !user?.wallet?.address) return;
