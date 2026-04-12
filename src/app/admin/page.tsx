@@ -40,11 +40,12 @@ const CAMPAIGN_ABI = [
   { name: 'denyWithdraw',    type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'uint256' }], outputs: [] },
 ] as const;
 
-type Tab = 'campaigns' | 'withdraws' | 'refunds' | 'history';
+type Tab = 'campaigns' | 'withdraws' | 'refunds' | 'active' | 'history';
 
 type PendingCampaign  = { address: string; title: string; image: string; creator: string; metadataUrl?: string };
 type PendingRequest   = { index: number; amount: string; reason: string; timestamp: number; campaign: string; title: string; creator: string };
 type RefundableCampaign = { address: string; title: string; image: string; creator: string; balance: string; donorCount: number; cancelled: boolean; isRefundable: boolean; deadline: number; raised: string; goal: string };
+type ActiveCampaign  = { address: string; title: string; image: string; creator: string; raised: string; goal: string; deadline: number; balance: string; donorCount: number };
 type HistoryStatus = 'success' | 'expired' | 'cancelled' | 'denied';
 type HistoryCampaign = { address: string; title: string; image: string; creator: string; raised: string; goal: string; deadline: number; status: HistoryStatus };
 
@@ -61,6 +62,9 @@ export default function AdminPage() {
 
   const [loadingRefunds,       setLoadingRefunds]       = useState(true);
   const [refundableCampaigns,  setRefundableCampaigns]  = useState<RefundableCampaign[]>([]);
+
+  const [loadingActive,   setLoadingActive]   = useState(true);
+  const [activeCampaigns, setActiveCampaigns] = useState<ActiveCampaign[]>([]);
 
   const [loadingHistory,   setLoadingHistory]   = useState(true);
   const [historyCampaigns, setHistoryCampaigns] = useState<HistoryCampaign[]>([]);
@@ -179,6 +183,39 @@ export default function AdminPage() {
     finally { setLoadingRefunds(false); }
   };
 
+  const fetchActiveCampaigns = async () => {
+    setLoadingActive(true);
+    try {
+      const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, rpcProvider);
+      const all: string[] = await factory.getAllCampaigns();
+      const now = Math.floor(Date.now() / 1000);
+      const rows = await Promise.all(all.map(async (addr): Promise<ActiveCampaign | null> => {
+        try {
+          const code = await rpcProvider.getCode(addr);
+          if (code === '0x') return null;
+          const [approved, denied] = await Promise.all([factory.isApproved(addr), factory.deniedCampaigns(addr)]);
+          if (!approved || denied) return null;
+          const c = new Contract(addr, CAMPAIGN_ABI, rpcProvider);
+          const [title, image, creator, goalBN, raisedBN, deadlineBN, isCancelled, donorCountBN] = await Promise.all([
+            c.title(), c.image(), c.creator(), c.goal(), c.totalDonated(), c.deadline(), c.cancelled(), c.getDonorCount(),
+          ]);
+          if (isCancelled) return null;
+          if (Number(deadlineBN) < now) return null;
+          const balanceBN = await rpcProvider.getBalance(addr);
+          return {
+            address: addr, title, image, creator,
+            raised: ethers.formatEther(raisedBN), goal: ethers.formatEther(goalBN),
+            deadline: Number(deadlineBN), balance: ethers.formatEther(balanceBN),
+            donorCount: Number(donorCountBN),
+          };
+        } catch { return null; }
+      }));
+      rows.sort((a, b) => (a?.deadline ?? 0) - (b?.deadline ?? 0));
+      setActiveCampaigns(rows.filter(Boolean) as ActiveCampaign[]);
+    } catch (e) { console.error(e); }
+    finally { setLoadingActive(false); }
+  };
+
   const fetchHistoryCampaigns = async () => {
     setLoadingHistory(true);
     try {
@@ -232,6 +269,7 @@ export default function AdminPage() {
     fetchPendingCampaigns();
     fetchPendingWithdraws();
     fetchRefundableCampaigns();
+    fetchActiveCampaigns();
     fetchHistoryCampaigns();
   }, [authenticated]);
 
@@ -307,6 +345,7 @@ export default function AdminPage() {
     { key: 'campaigns', label: 'Kampanye',  count: pendingCampaigns.length },
     { key: 'withdraws', label: 'Withdraw',  count: pendingRequests.length },
     { key: 'refunds',   label: 'Refund',    count: refundableCampaigns.length },
+    { key: 'active',    label: 'Aktif',     count: activeCampaigns.length },
     { key: 'history',   label: 'Riwayat',   count: historyCampaigns.length },
   ];
 
@@ -538,6 +577,86 @@ export default function AdminPage() {
             )}
           </div>
         )}
+        {/* ── Tab: Aktif ── */}
+        {tab === 'active' && (
+          <div>
+            <h2 className="text-base font-semibold text-gray-300 mb-2">Kampanye Sedang Berjalan</h2>
+            <p className="text-sm text-gray-500 mb-6">Kampanye yang sudah disetujui, belum dibatalkan, dan deadline belum lewat.</p>
+
+            {loadingActive ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {[...Array(3)].map((_, i) => <Skeleton key={i} />)}
+              </div>
+            ) : activeCampaigns.length === 0 ? (
+              <EmptyState icon="📭" message="Tidak ada kampanye yang sedang aktif" />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {activeCampaigns.map(c => {
+                  const now = Math.floor(Date.now() / 1000);
+                  const daysLeft = Math.max(0, Math.ceil((c.deadline - now) / 86400));
+                  const pct = Number(c.goal) > 0 ? Math.min(100, Math.round((Number(c.raised) / Number(c.goal)) * 100)) : 0;
+                  const goalMet = Number(c.raised) >= Number(c.goal);
+                  return (
+                    <div key={c.address} className="bg-[#0d1526] border border-white/10 hover:border-indigo-500/30 rounded-2xl overflow-hidden transition-all">
+                      <div className="relative h-32 bg-gradient-to-br from-indigo-900/20 to-purple-900/20">
+                        {c.image && !imgErrors[c.address] ? (
+                          <img src={c.image} alt={c.title} className="w-full h-full object-cover opacity-60"
+                            onError={() => setImgErrors(p => ({ ...p, [c.address]: true }))} />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-3xl opacity-10">🌱</div>
+                        )}
+                        <div className="absolute top-2 right-2 flex gap-1">
+                          {goalMet && (
+                            <span className="text-xs bg-emerald-500/80 text-white px-2 py-0.5 rounded-full font-medium">Goal Tercapai</span>
+                          )}
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${daysLeft <= 3 ? 'bg-red-500/80 text-white' : 'bg-white/10 text-gray-300'}`}>
+                            {daysLeft}h lagi
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-4">
+                        <h3 className="font-semibold text-white text-sm line-clamp-1 mb-1">{c.title}</h3>
+                        <p className="text-xs text-gray-600 font-mono truncate mb-3">👤 {c.creator}</p>
+
+                        <div className="space-y-1 mb-3">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-400">Terkumpul</span>
+                            <span className="text-white font-medium">{Number(c.raised).toFixed(4)} / {Number(c.goal).toFixed(2)} ETH</span>
+                          </div>
+                          <div className="w-full bg-white/5 rounded-full h-1.5">
+                            <div className={`h-1.5 rounded-full transition-all ${goalMet ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-gradient-to-r from-indigo-500 to-purple-500'}`}
+                              style={{ width: `${pct}%` }} />
+                          </div>
+                          <div className="flex justify-between text-xs text-gray-500">
+                            <span>{pct}%</span>
+                            <span>{c.donorCount} donor</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                          <div className="bg-white/5 rounded-lg p-2">
+                            <p className="text-gray-500">Saldo</p>
+                            <p className="text-white font-semibold mt-0.5">{Number(c.balance).toFixed(4)} ETH</p>
+                          </div>
+                          <div className="bg-white/5 rounded-lg p-2">
+                            <p className="text-gray-500">Deadline</p>
+                            <p className="text-white font-semibold mt-0.5">{new Date(c.deadline * 1000).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</p>
+                          </div>
+                        </div>
+
+                        <Link href={`/campaign/${c.address}`} className="block text-center text-xs text-indigo-400 hover:text-indigo-300 pt-1">
+                          Lihat Detail →
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Tab: Riwayat ── */}
         {tab === 'history' && (
           <div>
