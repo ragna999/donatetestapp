@@ -119,6 +119,89 @@ export default function PanduanPage() {
           </p>
         </div>
 
+        {/* Panduan Wallet */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8">
+          <h2 className="text-white font-semibold text-lg mb-1">Panduan Wallet</h2>
+          <p className="text-gray-400 text-sm mb-6">Ada dua cara mendapatkan wallet di Donatree — pilih yang paling mudah buatmu.</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            {/* Jalur 1: Email */}
+            <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xl">📧</span>
+                <div>
+                  <p className="text-white text-sm font-semibold">Login via Email</p>
+                  <span className="text-xs text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded-full">Direkomendasikan</span>
+                </div>
+              </div>
+              <ul className="space-y-1.5 text-xs text-gray-400">
+                <li className="flex gap-2"><span className="text-indigo-400 shrink-0">✓</span>Tidak perlu install apapun</li>
+                <li className="flex gap-2"><span className="text-indigo-400 shrink-0">✓</span>Wallet otomatis dibuat saat login</li>
+                <li className="flex gap-2"><span className="text-indigo-400 shrink-0">✓</span>Dikelola aman oleh Privy</li>
+                <li className="flex gap-2"><span className="text-indigo-400 shrink-0">✓</span>Bisa export private key kapanpun</li>
+              </ul>
+            </div>
+
+            {/* Jalur 2: MetaMask */}
+            <div className="bg-orange-500/5 border border-orange-500/20 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xl">🦊</span>
+                <div>
+                  <p className="text-white text-sm font-semibold">Login via MetaMask</p>
+                  <span className="text-xs text-orange-300 bg-orange-500/10 px-2 py-0.5 rounded-full">Untuk pengguna Web3</span>
+                </div>
+              </div>
+              <ul className="space-y-1.5 text-xs text-gray-400">
+                <li className="flex gap-2"><span className="text-orange-400 shrink-0">✓</span>Kamu pegang sendiri private key</li>
+                <li className="flex gap-2"><span className="text-orange-400 shrink-0">✓</span>Bisa dipakai di dApp lain</li>
+                <li className="flex gap-2"><span className="text-gray-600 shrink-0">→</span>Perlu install ekstensi MetaMask</li>
+                <li className="flex gap-2"><span className="text-gray-600 shrink-0">→</span>Perlu ganti jaringan ke Sepolia</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Tutorial Email (embedded wallet) */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-px flex-1 bg-white/10" />
+              <span className="text-xs text-gray-500 font-medium px-2">Tutorial: Login Email + Embedded Wallet</span>
+              <div className="h-px flex-1 bg-white/10" />
+            </div>
+            <div className="space-y-4">
+              <StepCard number={1} title="Klik Connect Wallet di navbar" desc="Pilih opsi Login dengan Email di popup Privy yang muncul." />
+              <StepCard number={2} title="Masukkan email dan verifikasi OTP" desc="Cek email kamu, masukkan kode OTP 6 digit yang dikirim Privy. Login selesai." />
+              <StepCard number={3} title="Wallet otomatis terbuat" desc="Privy langsung membuat embedded wallet untukmu. Alamat wallet muncul di navbar dan halaman Profile." />
+              <StepCard number={4} title="Salin alamat wallet di halaman Profile" desc='Buka menu Profile → salin alamat wallet (format 0x...). Ini "nomor rekening" blockchain kamu.' />
+              <StepCard number={5} title="Top-up ETH Sepolia via Faucet" desc="Kunjungi Google Faucet atau Chainlink Faucet, tempel alamat wallet, lalu klik Request. ETH testnet akan masuk dalam 1-2 menit." />
+              <StepCard number={6} title="Cek saldo di halaman Profile" desc="Buka Profile untuk melihat saldo ETH kamu. Setelah ada saldo, kamu sudah bisa berdonasi atau membuat campaign." />
+            </div>
+          </div>
+
+          {/* Tutorial MetaMask */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-px flex-1 bg-white/10" />
+              <span className="text-xs text-gray-500 font-medium px-2">Tutorial: Login MetaMask</span>
+              <div className="h-px flex-1 bg-white/10" />
+            </div>
+            <div className="space-y-4">
+              <StepCard number={1} title="Install ekstensi MetaMask" desc="Download di metamask.io, tersedia untuk Chrome, Firefox, dan Brave. Buat wallet baru atau import yang sudah ada." />
+              <StepCard number={2} title="Aktifkan jaringan Sepolia" desc="Di MetaMask, klik nama jaringan → Show test networks → pilih Sepolia Test Network." />
+              <StepCard number={3} title="Top-up ETH Sepolia via Faucet" desc="Salin alamat MetaMask kamu, lalu kunjungi Google Faucet atau Chainlink Faucet dan masukkan alamat tersebut." />
+              <StepCard number={4} title="Connect Wallet di Donatree" desc="Klik Connect Wallet di navbar → pilih MetaMask → setujui koneksi di popup MetaMask." />
+            </div>
+          </div>
+
+          {/* Cara Kirim ETH antar wallet */}
+          <div className="mt-6 bg-white/5 rounded-xl p-4">
+            <p className="text-white text-sm font-medium mb-2">💡 Cara kirim ETH antar wallet</p>
+            <p className="text-gray-400 text-sm">
+              Buka halaman <strong className="text-white">Profile</strong> → scroll ke bagian <em>Kirim ETH</em> →
+              masukkan alamat tujuan dan jumlah → klik Kirim. Cocok untuk memindahkan ETH dari wallet lain ke embedded wallet kamu.
+            </p>
+          </div>
+        </div>
+
         {/* Tab: Donatur / Pembuat Campaign */}
         <div className="mb-6">
           <div className="flex bg-white/5 border border-white/10 rounded-xl p-1 gap-1">
@@ -154,11 +237,11 @@ export default function PanduanPage() {
                 <Badge color="indigo">Donatur</Badge>
               </div>
               <div className="space-y-5">
-                <StepCard number={1} title="Install MetaMask" desc="Download ekstensi MetaMask di browser kamu (Chrome/Firefox). Buat akun baru atau import akun yang sudah ada." />
-                <StepCard number={2} title="Ganti jaringan ke Sepolia Testnet" desc="Di MetaMask, pilih jaringan Sepolia Test Network. Kalau tidak muncul, aktifkan di Settings > Advanced > Show test networks." />
-                <StepCard number={3} title="Dapatkan ETH Testnet" desc="Kunjungi Sepolia Faucet (sepoliafaucet.com) untuk mendapatkan ETH gratis. Masukkan alamat wallet kamu." />
-                <StepCard number={4} title="Connect Wallet" desc="Klik tombol Connect Wallet di navbar, lalu ikuti instruksi untuk menghubungkan wallet kamu." />
-                <StepCard number={5} title="Pilih Campaign dan Donasi" desc="Pilih campaign yang ingin kamu dukung, masukkan jumlah ETH, lalu konfirmasi transaksi di MetaMask." />
+                <StepCard number={1} title="Login dan dapatkan wallet" desc="Klik Connect Wallet di navbar. Bisa login via email (dapat embedded wallet otomatis) atau MetaMask. Lihat Panduan Wallet di atas untuk detail." />
+                <StepCard number={2} title="Top-up ETH Sepolia" desc="Pastikan wallet kamu punya saldo ETH Sepolia. Buka halaman Profile untuk melihat alamat wallet dan link ke faucet." />
+                <StepCard number={3} title="Pilih campaign" desc="Jelajahi campaign di halaman utama, pilih yang ingin kamu dukung, lalu buka halaman detailnya." />
+                <StepCard number={4} title="Masukkan jumlah donasi" desc="Isi jumlah ETH yang ingin kamu donasikan, lalu klik tombol Donasi." />
+                <StepCard number={5} title="Konfirmasi transaksi" desc="Setujui transaksi di wallet kamu (popup MetaMask atau konfirmasi Privy). Gas fee kecil dipotong otomatis." />
                 <StepCard number={6} title="Selesai" desc="Donasi langsung masuk ke smart contract campaign. Riwayat donasi bisa dicek di halaman Riwayat." />
               </div>
             </div>
@@ -172,7 +255,7 @@ export default function PanduanPage() {
                   dan semua transaksi bisa dicek secara publik di Etherscan.
                 </AccordionItem>
                 <AccordionItem title="Bisakah saya membatalkan donasi?">
-                  Tidak bisa. Transaksi blockchain bersifat final. Pastikan kamu yakin sebelum mengkonfirmasi di MetaMask.
+                  Tidak bisa. Transaksi blockchain bersifat final. Pastikan kamu yakin sebelum mengkonfirmasi transaksi.
                 </AccordionItem>
                 <AccordionItem title="Kenapa ada gas fee?">
                   Gas fee adalah biaya untuk memproses transaksi di jaringan Ethereum.
