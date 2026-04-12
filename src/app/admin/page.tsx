@@ -316,7 +316,7 @@ export default function AdminPage() {
   };
   const handleCancelCampaign = async (addr: string) => {
     if (!confirm('Batalkan kampanye ini? Donor akan bisa klaim refund.')) return;
-    try { const s = await getSigner(); const c = new Contract(addr, CAMPAIGN_ABI, s); const tx = await (c as any).cancelCampaign(); const receipt = await tx.wait(); setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Kampanye dibatalkan.' }); await fetchRefundableCampaigns(); }
+    try { const s = await getSigner(); const c = new Contract(addr, CAMPAIGN_ABI, s); const tx = await (c as any).cancelCampaign(); const receipt = await tx.wait(); setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Kampanye dibatalkan.' }); await Promise.all([fetchActiveCampaigns(), fetchRefundableCampaigns()]); }
     catch (e: any) { alert('❌ ' + errText(e)); }
   };
   const handleRefundAll = async (addr: string, donorCount: number) => {
@@ -645,6 +645,10 @@ export default function AdminPage() {
                           </div>
                         </div>
 
+                        <button onClick={() => handleCancelCampaign(c.address)}
+                          className="w-full py-2 mb-2 bg-red-600/20 hover:bg-red-600 border border-red-600/30 hover:border-red-500 text-red-400 hover:text-white text-xs rounded-xl transition-all">
+                          🚫 Batalkan Kampanye
+                        </button>
                         <Link href={`/campaign/${c.address}`} className="block text-center text-xs text-indigo-400 hover:text-indigo-300 pt-1">
                           Lihat Detail →
                         </Link>
