@@ -166,6 +166,7 @@ export default function AdminPage() {
           ]);
           const balanceBN = await rpcProvider.getBalance(addr);
           if (!refundable && balanceBN === 0n) return null;
+          if (isCancelled && balanceBN === 0n) return null; // refund sudah selesai → tampil di Riwayat saja
           return {
             address: addr, title, image, creator, balance: ethers.formatEther(balanceBN),
             donorCount: Number(donorCountBN), cancelled: isCancelled, isRefundable: refundable,
