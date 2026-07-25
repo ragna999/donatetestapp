@@ -50,7 +50,7 @@ export default function LaporanPage() {
     if (!wallet) throw new Error('Wallet belum terhubung');
     await wallet.switchChain(11155111);
     const eip1193 = await wallet.getEthereumProvider();
-    return new ethers.BrowserProvider(eip1193);
+    return { provider: new ethers.BrowserProvider(eip1193), address: wallet.address };
   }
 
   const [campaignTitle,    setCampaignTitle]    = useState('');
@@ -171,8 +171,8 @@ export default function LaporanPage() {
     }
     setSubmittingReport(prev => ({ ...prev, [withdrawIndex]: true }));
     try {
-      const bp        = await getEthProvider();
-      const signer    = await bp.getSigner();
+      const { provider: bp, address: signerAddr } = await getEthProvider();
+      const signer    = await bp.getSigner(signerAddr);
       const creatorAddr = await signer.getAddress();
       const timestamp = Math.floor(Date.now() / 1000);
       const message   = `report:${id.toLowerCase()}|withdrawIndex:${withdrawIndex}|title:${draft.title.trim()}|timestamp:${timestamp}`;

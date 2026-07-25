@@ -209,7 +209,7 @@ export default function CreateCampaignPage() {
       await wallet.switchChain(11155111);
       const eip1193           = await wallet.getEthereumProvider();
       const provider          = new ethers.BrowserProvider(eip1193);
-      const signer            = await provider.getSigner();
+      const signer            = await provider.getSigner(wallet.address);
       const factory           = new ethers.Contract(FACTORY_ADDRESS, CAMPAIGN_ABI, signer);
       const goalInWei         = ethers.parseEther(goal);
       const durationInSeconds = parseInt(duration) * 86400;

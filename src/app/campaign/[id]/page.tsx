@@ -89,7 +89,7 @@ export default function CampaignDetailPage() {
     if (!wallet) throw new Error('Wallet belum terhubung');
     await wallet.switchChain(11155111);
     const eip1193 = await wallet.getEthereumProvider();
-    return new ethers.BrowserProvider(eip1193);
+    return { provider: new ethers.BrowserProvider(eip1193), address: wallet.address };
   }
 
   const [data,           setData]           = useState<any>(null);
@@ -277,8 +277,8 @@ export default function CampaignDetailPage() {
     e.preventDefault();
     setDonating(true);
     try {
-      const bp       = await getEthProvider();
-      const signer   = await bp.getSigner();
+      const { provider: bp, address: signerAddr } = await getEthProvider();
+      const signer   = await bp.getSigner(signerAddr);
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
       const tx       = await contract.donate({ value: ethers.parseEther(donationAmount) });
       const receipt  = await tx.wait();
@@ -294,8 +294,8 @@ export default function CampaignDetailPage() {
     if (!withdrawAmount || !withdrawReason.trim()) return alert('Isi jumlah & alasan dulu');
     setRequesting(true);
     try {
-      const bp       = await getEthProvider();
-      const signer   = await bp.getSigner();
+      const { provider: bp, address: signerAddr } = await getEthProvider();
+      const signer   = await bp.getSigner(signerAddr);
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
       const tx       = await contract.requestWithdraw(ethers.parseEther(withdrawAmount), withdrawReason.trim());
       const receipt  = await tx.wait();
@@ -312,8 +312,8 @@ export default function CampaignDetailPage() {
     if (approvedIdxs.length === 0) return alert('Belum ada request yang disetujui admin');
     setWithdrawing(true);
     try {
-      const bp       = await getEthProvider();
-      const signer   = await bp.getSigner();
+      const { provider: bp, address: signerAddr } = await getEthProvider();
+      const signer   = await bp.getSigner(signerAddr);
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
       let chosen: bigint | null = null;
       for (const i of approvedIdxs) {
@@ -344,8 +344,8 @@ export default function CampaignDetailPage() {
   async function handleClaimRefund() {
     setClaiming(true);
     try {
-      const bp       = await getEthProvider();
-      const signer   = await bp.getSigner();
+      const { provider: bp, address: signerAddr } = await getEthProvider();
+      const signer   = await bp.getSigner(signerAddr);
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
       const tx       = await (contract as any).claimRefund();
       const receipt  = await tx.wait();
@@ -404,8 +404,8 @@ export default function CampaignDetailPage() {
     if (!commentText.trim()) return;
     setSubmittingComment(true);
     try {
-      const bp        = await getEthProvider();
-      const signer    = await bp.getSigner();
+      const { provider: bp, address: signerAddr } = await getEthProvider();
+      const signer    = await bp.getSigner(signerAddr);
       const author    = await signer.getAddress();
       const timestamp = Math.floor(Date.now() / 1000);
       const text      = commentText.trim();
