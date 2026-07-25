@@ -293,13 +293,30 @@ export default function CampaignDetailPage() {
     try {
       const { provider: bp, address: signerAddr } = await getEthProvider();
       const signer   = await bp.getSigner(signerAddr);
+      const actualAddr = await signer.getAddress();
+      const bal = await bp.getBalance(actualAddr);
+      const balEth = ethers.formatEther(bal);
+      const donateEth = donationAmount;
+      const neededWei = ethers.parseEther(donateEth) + ethers.parseEther('0.005'); // rough gas estimate
+      const neededEth = ethers.formatEther(neededWei);
+
+      console.log('[DONATE DEBUG]', {
+        userWallet: user?.wallet?.address,
+        selectedWallet: signerAddr,
+        signerAddr: actualAddr,
+        balance: balEth + ' ETH',
+        donating: donateEth + ' ETH',
+        approxNeeded: neededEth + ' ETH',
+      });
+
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
       const tx       = await contract.donate({ value: ethers.parseEther(donationAmount) });
       const receipt  = await tx.wait();
       setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Donasi berhasil!' });
       setDonationAmount('');
     } catch (err: any) {
-      alert('Donasi gagal: ' + errText(err));
+      const debugInfo = `\n\n[DEBUG] user: ${user?.wallet?.address}\nwallet: ${wallets.map(w => w.address + '(' + w.walletClientType + ')').join(', ')}`;
+      alert('Donasi gagal: ' + errText(err) + debugInfo);
     } finally { setDonating(false); }
   }
 
