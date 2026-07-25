@@ -156,7 +156,7 @@ export default function CreateCampaignPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const wallet = wallets[0];
+      const wallet = wallets.find(w => w.walletClientType === 'privy') || wallets[0];
       if (!wallet) { alert('Wallet tidak ditemukan'); return; }
       const address = wallet.address;
 

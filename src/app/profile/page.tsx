@@ -85,7 +85,7 @@ export default function ProfilePage() {
     if (!ethers.isAddress(sendTo)) { setSendError('Alamat tujuan tidak valid'); return; }
     const amt = parseFloat(sendAmount);
     if (isNaN(amt) || amt <= 0) { setSendError('Jumlah tidak valid'); return; }
-    const wallet = wallets[0];
+    const wallet = wallets.find(w => w.walletClientType === 'privy') || wallets[0];
     if (!wallet) { setSendError('Wallet tidak ditemukan'); return; }
     setSending(true);
     try {
