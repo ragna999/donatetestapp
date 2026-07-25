@@ -85,11 +85,25 @@ export default function CampaignDetailPage() {
   const { wallets } = useWallets();
 
   async function getEthProvider() {
+    const allWallets = wallets.map(w => ({ addr: w.address, type: w.walletClientType, chain: w.chainId }));
+    console.log('[DEBUG] All wallets:', JSON.stringify(allWallets));
+    console.log('[DEBUG] user?.wallet?.address:', user?.wallet?.address);
+
     const wallet = wallets.find(w => w.walletClientType === 'privy') || wallets[0];
     if (!wallet) throw new Error('Wallet belum terhubung');
+    console.log('[DEBUG] Selected wallet:', wallet.address, 'type:', wallet.walletClientType);
+
     await wallet.switchChain(11155111);
     const eip1193 = await wallet.getEthereumProvider();
-    return { provider: new ethers.BrowserProvider(eip1193), address: wallet.address };
+    const bp = new ethers.BrowserProvider(eip1193);
+    const signer = await bp.getSigner(wallet.address);
+    const signerAddr = await signer.getAddress();
+    console.log('[DEBUG] Signer address:', signerAddr);
+
+    const bal = await bp.getBalance(signerAddr);
+    console.log('[DEBUG] Signer balance:', ethers.formatEther(bal), 'ETH');
+
+    return { provider: bp, address: wallet.address };
   }
 
   const [data,           setData]           = useState<any>(null);
