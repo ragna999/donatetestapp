@@ -208,7 +208,7 @@ export default function CampaignDetailPage() {
 
   // ─── Set currentAccount & isOwner dari Privy ─────────────────────────────
   useEffect(() => {
-    const addr = user?.wallet?.address ?? '';
+    const addr = wallets.find(w => w.walletClientType === 'privy')?.address ?? user?.wallet?.address ?? '';
     setCurrentAccount(addr);
     if (addr && data?.creator) {
       setIsOwner(addr.toLowerCase() === String(data.creator).toLowerCase());
@@ -219,7 +219,7 @@ export default function CampaignDetailPage() {
 
   // ─── Fetch refund amount saat isRefundable & user sudah diketahui ─────────
   useEffect(() => {
-    const addr = user?.wallet?.address;
+    const addr = wallets.find(w => w.walletClientType === 'privy')?.address ?? user?.wallet?.address;
     if (!isRefundable || !addr || !id || !ethers.isAddress(id)) return;
     const contract = new Contract(id, CAMPAIGN_ABI, provider);
     Promise.all([

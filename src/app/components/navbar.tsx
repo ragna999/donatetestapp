@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ethers } from 'ethers';
-import { usePrivy, useCreateWallet } from '@privy-io/react-auth';
+import { usePrivy, useCreateWallet, useWallets } from '@privy-io/react-auth';
 import { RPC, ADMIN_MANAGER_ADDRESS } from '../lib/config';
 
 const ADMIN_ABI = [
@@ -13,12 +13,14 @@ const ADMIN_ABI = [
 export default function Navbar() {
   const { user, authenticated, ready, login, logout } = usePrivy();
   const { createWallet } = useCreateWallet();
+  const { wallets } = useWallets();
   const [isOpen,   setIsOpen]   = useState(false);
   const [isAdmin,  setIsAdmin]  = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  const shortAddress = user?.wallet?.address
-    ? `${user.wallet.address.slice(0, 6)}…${user.wallet.address.slice(-4)}`
+  const walletAddr = wallets.find(w => w.walletClientType === 'privy')?.address ?? user?.wallet?.address ?? '';
+  const shortAddress = walletAddr
+    ? `${walletAddr.slice(0, 6)}...${walletAddr.slice(-4)}`
     : '';
 
   useEffect(() => {
@@ -29,22 +31,22 @@ export default function Navbar() {
 
   useEffect(() => {
     if (!authenticated || !ready) return;
-    if (!user?.wallet?.address) {
+    if (!walletAddr) {
       createWallet().catch(() => {});
     }
   }, [authenticated, ready, user?.wallet?.address]);
 
   useEffect(() => {
-    if (!authenticated || !user?.wallet?.address) return;
+    if (!authenticated || !walletAddr) return;
     (async () => {
       try {
         const provider  = new ethers.JsonRpcProvider(RPC);
         const contract  = new ethers.Contract(ADMIN_MANAGER_ADDRESS, ADMIN_ABI, provider);
-        const result    = await contract.isAdmin(user.wallet!.address);
+        const result    = await contract.isAdmin(walletAddr);
         setIsAdmin(result);
       } catch { setIsAdmin(false); }
     })();
-  }, [authenticated, user?.wallet?.address]);
+  }, [authenticated, walletAddr]);
 
   if (!ready) return null;
 

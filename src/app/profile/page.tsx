@@ -27,6 +27,9 @@ export default function ProfilePage() {
   const { wallets } = useWallets();
   const router = useRouter();
 
+  // Consistent wallet address: always prefer embedded wallet
+  const walletAddress = wallets.find(w => w.walletClientType === 'privy')?.address ?? user?.wallet?.address ?? '';
+
   const [campaigns,        setCampaigns]        = useState<any[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
   const [imgErrors,        setImgErrors]        = useState<Record<string, boolean>>({});
@@ -41,7 +44,7 @@ export default function ProfilePage() {
   const [txResult,     setTxResult]     = useState<{ hash: string; label: string } | null>(null);
 
   useEffect(() => {
-    if (!authenticated || !user?.wallet?.address) return;
+    if (!authenticated || !walletAddress) return;
     (async () => {
       try {
         const provider = new ethers.JsonRpcProvider(RPC);
@@ -52,7 +55,7 @@ export default function ProfilePage() {
           all.map(async (addr) => {
             try {
               const creator = await factory.campaignToCreator(addr);
-              if (creator.toLowerCase() !== user.wallet!.address.toLowerCase()) return null;
+              if (creator.toLowerCase() !== walletAddress.toLowerCase()) return null;
               const c = new Contract(addr, CAMPAIGN_ABI, provider);
               const [title, description, image, goal, raised, deadline] = await Promise.all([
                 c.title(), c.description(), c.image(), c.goal(), c.totalDonated(), c.deadline(),
@@ -73,12 +76,13 @@ export default function ProfilePage() {
 
   // Fetch ETH balance
   useEffect(() => {
-    if (!user?.wallet?.address) return;
+    const addr = wallets.find(w => w.walletClientType === 'privy')?.address ?? user?.wallet?.address;
+    if (!addr) return;
     const provider = new ethers.JsonRpcProvider(RPC);
-    provider.getBalance(user.wallet.address)
+    provider.getBalance(addr)
       .then(b => setBalance(ethers.formatEther(b)))
       .catch(() => setBalance('0'));
-  }, [user?.wallet?.address]);
+  }, [user?.wallet?.address, wallets]);
 
   async function handleSend() {
     setSendError('');
@@ -105,8 +109,8 @@ export default function ProfilePage() {
   }
 
   function copyAddress() {
-    if (!user?.wallet?.address) return;
-    navigator.clipboard.writeText(user.wallet.address);
+    if (!walletAddress) return;
+    navigator.clipboard.writeText(walletAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -153,7 +157,7 @@ export default function ProfilePage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold">Profil Saya</h1>
-            <p className="text-gray-400 text-sm font-mono mt-1 break-all">{user?.wallet?.address}</p>
+            <p className="text-gray-400 text-sm font-mono mt-1 break-all">{walletAddress}</p>
           </div>
         </div>
       </div>
@@ -172,7 +176,7 @@ export default function ProfilePage() {
             <div>
               <p className="text-xs text-gray-500 mb-1">Alamat</p>
               <div className="flex items-center gap-2">
-                <p className="text-sm font-mono text-white break-all">{user?.wallet?.address}</p>
+                <p className="text-sm font-mono text-white break-all">{walletAddress}</p>
                 <button onClick={copyAddress}
                   className="shrink-0 text-xs px-2 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition text-gray-400 hover:text-white">
                   {copied ? '✓ Disalin' : 'Salin'}
