@@ -6,6 +6,8 @@ import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { uploadToPinata, uploadJSONToPinata } from '../utils/uploadToPinata';
 import { FACTORY_ADDRESS } from '../lib/config';
 import TxSuccessModal from '../components/TxSuccessModal';
+import { useToast } from '../components/Toast';
+import { waitForTxWithTimeout } from '../utils/withTimeout';
 
 const CAMPAIGN_ABI = [
   {
@@ -74,6 +76,7 @@ const DOC_REQUIREMENTS: Record<string, DocReq[]> = {
 export default function CreateCampaignPage() {
   const { user } = usePrivy();
   const { wallets } = useWallets();
+  const toast = useToast();
 
   const [title,    setTitle]    = useState('');
   const [desc,     setDesc]     = useState('');
@@ -124,7 +127,7 @@ export default function CreateCampaignPage() {
       const url = await uploadToPinata(file);
       setImageUrl(url);
     } catch {
-      alert('Upload gambar gagal');
+      toast.error('Upload gambar gagal');
     } finally {
       setUploading(false);
     }
@@ -133,14 +136,14 @@ export default function CreateCampaignPage() {
   const handleDocUpload = async (docKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { alert('Ukuran file maksimal 5MB'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error('Ukuran file maksimal 5MB'); return; }
     setDocUploading(prev => ({ ...prev, [docKey]: true }));
     try {
       const url = await uploadToPinata(file);
       setDocUrls(prev  => ({ ...prev,  [docKey]: url       }));
       setDocNames(prev => ({ ...prev,  [docKey]: file.name }));
     } catch {
-      alert('Upload dokumen gagal');
+      toast.error('Upload dokumen gagal');
     } finally {
       setDocUploading(prev => ({ ...prev, [docKey]: false }));
     }
@@ -155,34 +158,35 @@ export default function CreateCampaignPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const loadingId = toast.loading('Membuat kampanye...');
     try {
       const wallet = wallets.find(w => w.walletClientType === 'privy') || wallets[0];
-      if (!wallet) { alert('Wallet tidak ditemukan'); return; }
+      if (!wallet) { toast.error('Wallet tidak ditemukan'); return; }
       const address = wallet.address;
 
       const profileRes  = await fetch(`/api/user-social/${address}`);
       const profileData = await profileRes.json();
       if (!profileData.twitter || !profileData.email) {
-        alert('Kamu harus menghubungkan Twitter dan Email di profil sebelum membuat kampanye.');
+        toast.error('Hubungkan Twitter dan Email di profil sebelum membuat kampanye.');
         return;
       }
       if (!social || !social.startsWith('http')) {
-        alert('Masukkan link sosial media yang valid!');
+        toast.error('Masukkan link sosial media yang valid!');
         return;
       }
       if (!category) {
-        alert('Pilih kategori penyelenggara terlebih dahulu.');
+        toast.error('Pilih kategori penyelenggara terlebih dahulu.');
         return;
       }
       const requiredDocs = DOC_REQUIREMENTS[category].filter(d => d.required);
       for (const doc of requiredDocs) {
         if (!docUrls[doc.key]) {
-          alert(`Upload "${doc.label}" terlebih dahulu.`);
+          toast.error(`Upload "${doc.label}" terlebih dahulu.`);
           return;
         }
       }
       if (!contact.nama.trim() || !contact.whatsapp.trim() || !contact.email.trim() || !contact.alamat.trim()) {
-        alert('Lengkapi semua informasi kontak (Nama, WhatsApp, Email, Alamat).');
+        toast.error('Lengkapi semua informasi kontak (Nama, WhatsApp, Email, Alamat).');
         return;
       }
 
@@ -215,7 +219,10 @@ export default function CreateCampaignPage() {
       const durationInSeconds = parseInt(duration) * 86400;
 
       const tx      = await factory.createCampaign(title, desc, imageUrl || '', goalInWei, location, durationInSeconds, metadataUrl);
-      const receipt = await tx.wait();
+      toast.dismiss(loadingId);
+      const toastWaitId = toast.loading('Menunggu konfirmasi blockchain...');
+      const receipt = await waitForTxWithTimeout(tx.wait(), 60_000, 'Buat Kampanye');
+      toast.dismiss(toastWaitId);
       setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Kampanye berhasil dibuat! Menunggu persetujuan admin.' });
 
       setTitle(''); setDesc(''); setGoal(''); setLocation(''); setDuration('');
@@ -223,7 +230,7 @@ export default function CreateCampaignPage() {
       setContact({ nama: '', whatsapp: '', email: '', alamat: '', website: '' });
     } catch (err: any) {
       console.error(err);
-      alert('Gagal membuat campaign: ' + (err.message || err));
+      toast.error('Gagal membuat campaign: ' + (err.message || err));
     } finally {
       setLoading(false);
     }

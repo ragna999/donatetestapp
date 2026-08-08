@@ -6,6 +6,7 @@ import { ethers, Contract } from 'ethers';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import Link from 'next/link';
 import { RPC } from '../../../lib/config';
+import { useToast } from '../../../components/Toast';
 
 const EXPLORER = 'https://sepolia.etherscan.io';
 
@@ -44,6 +45,7 @@ export default function LaporanPage() {
   const provider = useMemo(() => new ethers.JsonRpcProvider(RPC), []);
   const { user, authenticated } = usePrivy();
   const { wallets } = useWallets();
+  const toast = useToast();
 
   async function getEthProvider() {
     const wallet = wallets.find(w => w.walletClientType === 'privy') || wallets[0];
@@ -167,7 +169,7 @@ export default function LaporanPage() {
   async function handleSubmitReport(withdrawIndex: number) {
     const draft = reportDraft[withdrawIndex];
     if (!draft?.title.trim() || !draft?.description.trim() || !draft?.photoUrl) {
-      return alert('Lengkapi judul, deskripsi, dan foto bukti.');
+      return toast.error('Lengkapi judul, deskripsi, dan foto bukti.');
     }
     setSubmittingReport(prev => ({ ...prev, [withdrawIndex]: true }));
     try {
@@ -204,7 +206,7 @@ export default function LaporanPage() {
       setReportForms(prev => ({ ...prev, [withdrawIndex]: false }));
       await fetchReports(id);
     } catch (err: any) {
-      alert('Gagal kirim laporan: ' + errText(err));
+      toast.error('Gagal kirim laporan: ' + errText(err));
     } finally {
       setSubmittingReport(prev => ({ ...prev, [withdrawIndex]: false }));
     }
@@ -390,7 +392,7 @@ export default function LaporanPage() {
                                     if (!res.ok) throw new Error(data.error);
                                     setReportDraft(prev => ({ ...prev, [r.index]: { ...draft, photoUrl: data.url, photoUploading: false } }));
                                   } catch {
-                                    alert('Upload foto gagal');
+                                    toast.error('Upload foto gagal');
                                     setReportDraft(prev => ({ ...prev, [r.index]: { ...draft, photoUploading: false } }));
                                   }
                                 }}

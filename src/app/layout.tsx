@@ -6,6 +6,8 @@ import { PrivyProvider } from '@privy-io/react-auth';
 import { sepolia } from 'viem/chains';
 import Navbar from './components/navbar';
 import Footer from './components/footer';
+import { ToastProvider } from './components/Toast';
+import ScrollToTop from './components/ScrollToTop';
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
@@ -31,7 +33,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           }}
         >
           <Navbar />
-          <main className="min-h-screen pt-16">{children}</main>
+          <main className="min-h-screen pt-16">
+            <ToastProvider>{children}</ToastProvider>
+          </main>
+          <ScrollToTop />
           <Footer />
         </PrivyProvider>
       </body>

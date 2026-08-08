@@ -117,8 +117,14 @@ export default function Navbar() {
           </div>
 
           {/* Mobile hamburger */}
-          <button onClick={() => setIsOpen(!isOpen)} className="sm:hidden p-2 text-gray-400 hover:text-white">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="sm:hidden p-2 text-gray-400 hover:text-white"
+            aria-label={isOpen ? 'Tutup menu' : 'Buka menu'}
+            aria-expanded={isOpen}
+            aria-controls="mobile-menu"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               {isOpen
                 ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -130,7 +136,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {isOpen && (
-        <div className="sm:hidden bg-[#0d1526]/98 backdrop-blur-xl border-t border-white/10 px-4 py-4 space-y-3">
+        <div id="mobile-menu" className="sm:hidden bg-[#0d1526]/98 backdrop-blur-xl border-t border-white/10 px-4 py-4 space-y-3" role="navigation" aria-label="Menu navigasi mobile">
           <Link href="/panduan" onClick={() => setIsOpen(false)}
             className="block text-sm text-gray-300 hover:text-white py-2"
           >

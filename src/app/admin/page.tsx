@@ -6,6 +6,8 @@ import { ethers, Contract, ContractTransactionResponse } from 'ethers';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { RPC, FACTORY_ADDRESS } from '../lib/config';
 import TxSuccessModal from '../components/TxSuccessModal';
+import { useToast } from '../components/Toast';
+import { waitForTxWithTimeout } from '../utils/withTimeout';
 
 const FACTORY_ABI = [
   { name: 'getAllCampaigns', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address[]' }] },
@@ -52,6 +54,7 @@ type HistoryCampaign = { address: string; title: string; image: string; creator:
 export default function AdminPage() {
   const { ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
+  const toast = useToast();
   const [tab, setTab] = useState<Tab>('campaigns');
 
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
@@ -71,6 +74,7 @@ export default function AdminPage() {
 
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   const [txResult, setTxResult] = useState<{ hash: string; label: string } | null>(null);
+  const [processingAction, setProcessingAction] = useState<string | null>(null);
 
   const rpcProvider = useMemo(() => new ethers.JsonRpcProvider(RPC), []);
 
@@ -104,7 +108,9 @@ export default function AdminPage() {
   }
 
   async function safeTx(p: Promise<ContractTransactionResponse>): Promise<string> {
-    const tx = await p; const receipt = await tx.wait(); return receipt?.hash ?? tx.hash;
+    const tx = await p;
+    const receipt = await waitForTxWithTimeout(tx.wait(), 60_000, 'Admin Transaksi');
+    return receipt?.hash ?? tx.hash;
   }
 
   // ─── Loaders ──────────────────────────────────────────────────────────────
@@ -302,30 +308,58 @@ export default function AdminPage() {
   }
 
   const handleApproveCampaign = async (address: string) => {
+    setProcessingAction(`approve-${address}`);
     try { const s = await getSigner(); const f = new Contract(FACTORY_ADDRESS, FACTORY_ABI, s); const hash = await safeTx(f.approveCampaign(address)); setTxResult({ hash, label: 'Campaign disetujui!' }); await fetchPendingCampaigns(); }
-    catch (e: any) { alert('❌ ' + errText(e)); }
+    catch (e: any) { toast.error(errText(e)); }
+    finally { setProcessingAction(null); }
   };
   const handleDenyCampaign = async (address: string) => {
+    setProcessingAction(`deny-${address}`);
     try { const s = await getSigner(); const f = new Contract(FACTORY_ADDRESS, FACTORY_ABI, s); const hash = await safeTx(f.denyCampaign(address)); setTxResult({ hash, label: 'Campaign ditolak.' }); await fetchPendingCampaigns(); }
-    catch (e: any) { alert('❌ ' + errText(e)); }
+    catch (e: any) { toast.error(errText(e)); }
+    finally { setProcessingAction(null); }
   };
   const handleApproveWithdraw = async (addr: string, idx: number) => {
+    setProcessingAction(`approve-wd-${addr}-${idx}`);
     try { const hash = await setWithdrawStatusTx(addr, idx, true); setTxResult({ hash, label: 'Withdraw disetujui!' }); await fetchPendingWithdraws(); }
-    catch (e: any) { alert('❌ ' + errText(e)); }
+    catch (e: any) { toast.error(errText(e)); }
+    finally { setProcessingAction(null); }
   };
   const handleDenyWithdraw = async (addr: string, idx: number) => {
+    setProcessingAction(`deny-wd-${addr}-${idx}`);
     try { const hash = await setWithdrawStatusTx(addr, idx, false); setTxResult({ hash, label: 'Withdraw ditolak.' }); await fetchPendingWithdraws(); }
-    catch (e: any) { alert('❌ ' + errText(e)); }
+    catch (e: any) { toast.error(errText(e)); }
+    finally { setProcessingAction(null); }
   };
   const handleCancelCampaign = async (addr: string) => {
     if (!confirm('Batalkan kampanye ini? Donor akan bisa klaim refund.')) return;
-    try { const s = await getSigner(); const c = new Contract(addr, CAMPAIGN_ABI, s); const tx = await (c as any).cancelCampaign(); const receipt = await tx.wait(); setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Kampanye dibatalkan.' }); await Promise.all([fetchActiveCampaigns(), fetchRefundableCampaigns(), fetchHistoryCampaigns()]); }
-    catch (e: any) { alert('❌ ' + errText(e)); }
+    setProcessingAction(`cancel-${addr}`);
+    try {
+      const s = await getSigner(); const c = new Contract(addr, CAMPAIGN_ABI, s);
+      const receipt = await waitForTxWithTimeout(
+        (c as any).cancelCampaign().then(async (tx: any) => tx.wait()),
+        60_000, 'Batalkan Kampanye'
+      );
+      setTxResult({ hash: receipt?.hash, label: 'Kampanye dibatalkan.' });
+      await Promise.all([fetchActiveCampaigns(), fetchRefundableCampaigns(), fetchHistoryCampaigns()]);
+    }
+    catch (e: any) { toast.error(errText(e)); }
+    finally { setProcessingAction(null); }
   };
   const handleRefundAll = async (addr: string, donorCount: number) => {
     if (!confirm(`Refund ke ${donorCount} donor sekaligus?`)) return;
-    try { const s = await getSigner(); const c = new Contract(addr, CAMPAIGN_ABI, s); const tx = await (c as any).refundAll(); const receipt = await tx.wait(); setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Refund berhasil!' }); await fetchRefundableCampaigns(); }
-    catch (e: any) { alert('❌ ' + errText(e)); }
+    setProcessingAction(`refund-${addr}`);
+    try {
+      const s = await getSigner(); const c = new Contract(addr, CAMPAIGN_ABI, s);
+      const receipt = await waitForTxWithTimeout(
+        (c as any).refundAll().then(async (tx: any) => tx.wait()),
+        60_000, 'Refund All'
+      );
+      setTxResult({ hash: receipt?.hash, label: 'Refund berhasil!' });
+      await fetchRefundableCampaigns();
+    }
+    catch (e: any) { toast.error(errText(e)); }
+    finally { setProcessingAction(null); }
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -429,8 +463,8 @@ export default function AdminPage() {
                     metadataUrl={c.metadataUrl}
                     imgError={imgErrors[c.address]} onImgError={() => setImgErrors(p => ({ ...p, [c.address]: true }))}
                     actions={[
-                      { label: '✅ Approve', onClick: () => handleApproveCampaign(c.address), color: 'green' },
-                      { label: '❌ Deny',    onClick: () => handleDenyCampaign(c.address),    color: 'red'   },
+                      { label: '✅ Approve', onClick: () => handleApproveCampaign(c.address), color: 'green', disabled: processingAction === `approve-${c.address}`, loadingLabel: 'Approving...' },
+                      { label: '❌ Deny',    onClick: () => handleDenyCampaign(c.address),    color: 'red',   disabled: processingAction === `deny-${c.address}`, loadingLabel: 'Denying...' },
                     ]}
                   />
                 ))}
@@ -476,12 +510,18 @@ export default function AdminPage() {
 
                     <div className="flex gap-2">
                       <button onClick={() => handleApproveWithdraw(r.campaign, r.index)}
-                        className="flex-1 py-2 bg-green-600/20 hover:bg-green-600 border border-green-600/30 hover:border-green-500 text-green-400 hover:text-white text-sm rounded-xl transition-all">
-                        ✅ Approve
+                        disabled={processingAction === `approve-wd-${r.campaign}-${r.index}`}
+                        className="flex-1 py-2 bg-green-600/20 hover:bg-green-600 border border-green-600/30 hover:border-green-500 text-green-400 hover:text-white text-sm rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        {processingAction === `approve-wd-${r.campaign}-${r.index}` ? (
+                          <span className="flex items-center justify-center gap-1.5"><span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />Approving...</span>
+                        ) : '✅ Approve'}
                       </button>
                       <button onClick={() => handleDenyWithdraw(r.campaign, r.index)}
-                        className="flex-1 py-2 bg-red-600/20 hover:bg-red-600 border border-red-600/30 hover:border-red-500 text-red-400 hover:text-white text-sm rounded-xl transition-all">
-                        ❌ Deny
+                        disabled={processingAction === `deny-wd-${r.campaign}-${r.index}`}
+                        className="flex-1 py-2 bg-red-600/20 hover:bg-red-600 border border-red-600/30 hover:border-red-500 text-red-400 hover:text-white text-sm rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        {processingAction === `deny-wd-${r.campaign}-${r.index}` ? (
+                          <span className="flex items-center justify-center gap-1.5"><span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />Denying...</span>
+                        ) : '❌ Deny'}
                       </button>
                     </div>
                   </div>
@@ -553,14 +593,20 @@ export default function AdminPage() {
                         <div className="space-y-2">
                           {canRefund && (
                             <button onClick={() => handleRefundAll(c.address, c.donorCount)}
-                              className="w-full py-2 bg-blue-600/20 hover:bg-blue-600 border border-blue-600/30 hover:border-blue-500 text-blue-400 hover:text-white text-sm rounded-xl transition-all font-medium">
-                              💸 Refund All ({c.donorCount} donor)
+                              disabled={processingAction === `refund-${c.address}`}
+                              className="w-full py-2 bg-blue-600/20 hover:bg-blue-600 border border-blue-600/30 hover:border-blue-500 text-blue-400 hover:text-white text-sm rounded-xl transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                              {processingAction === `refund-${c.address}` ? (
+                                <span className="flex items-center justify-center gap-1.5"><span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />Refunding...</span>
+                              ) : `💸 Refund All (${c.donorCount} donor)`}
                             </button>
                           )}
                           {canCancel && (
                             <button onClick={() => handleCancelCampaign(c.address)}
-                              className="w-full py-2 bg-red-600/20 hover:bg-red-600 border border-red-600/30 hover:border-red-500 text-red-400 hover:text-white text-sm rounded-xl transition-all">
-                              🚫 Batalkan Kampanye
+                              disabled={processingAction === `cancel-${c.address}`}
+                              className="w-full py-2 bg-red-600/20 hover:bg-red-600 border border-red-600/30 hover:border-red-500 text-red-400 hover:text-white text-sm rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                              {processingAction === `cancel-${c.address}` ? (
+                                <span className="flex items-center justify-center gap-1.5"><span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />Membatalkan...</span>
+                              ) : '🚫 Batalkan Kampanye'}
                             </button>
                           )}
                           {!canRefund && !canCancel && (
@@ -649,8 +695,11 @@ export default function AdminPage() {
                         </div>
 
                         <button onClick={() => handleCancelCampaign(c.address)}
-                          className="w-full py-2 mb-2 bg-red-600/20 hover:bg-red-600 border border-red-600/30 hover:border-red-500 text-red-400 hover:text-white text-xs rounded-xl transition-all">
-                          🚫 Batalkan Kampanye
+                          disabled={processingAction === `cancel-${c.address}`}
+                          className="w-full py-2 mb-2 bg-red-600/20 hover:bg-red-600 border border-red-600/30 hover:border-red-500 text-red-400 hover:text-white text-xs rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                          {processingAction === `cancel-${c.address}` ? (
+                            <span className="flex items-center justify-center gap-1.5"><span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />Membatalkan...</span>
+                          ) : '🚫 Batalkan Kampanye'}
                         </button>
                         <Link href={`/campaign/${c.address}`} className="block text-center text-xs text-indigo-400 hover:text-indigo-300 pt-1">
                           Lihat Detail →
@@ -753,7 +802,7 @@ function EmptyState({ icon, message }: { icon: string; message: string }) {
 function CampaignCard({ title, image, creator, address, metadataUrl, imgError, onImgError, actions }: {
   title: string; image: string; creator: string; address: string; metadataUrl?: string;
   imgError?: boolean; onImgError?: () => void;
-  actions: { label: string; onClick: () => void; color: 'green' | 'red' }[];
+  actions: { label: string; onClick: () => void; color: 'green' | 'red'; disabled?: boolean; loadingLabel?: string }[];
 }) {
   const [meta,        setMeta]        = useState<any>(null);
   const [showDocs,    setShowDocs]    = useState(false);
@@ -837,9 +886,14 @@ function CampaignCard({ title, image, creator, address, metadataUrl, imgError, o
 
         <div className="flex gap-2">
           {actions.map(a => (
-            <button key={a.label} onClick={a.onClick}
-              className={`flex-1 py-2 border text-sm rounded-xl transition-all ${colorMap[a.color]}`}>
-              {a.label}
+            <button key={a.label} onClick={a.onClick} disabled={a.disabled}
+              className={`flex-1 py-2 border text-sm rounded-xl transition-all ${colorMap[a.color]} disabled:opacity-50 disabled:cursor-not-allowed`}>
+              {a.disabled && a.loadingLabel ? (
+                <span className="flex items-center justify-center gap-1.5">
+                  <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                  {a.loadingLabel}
+                </span>
+              ) : a.label}
             </button>
           ))}
         </div>

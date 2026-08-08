@@ -120,20 +120,20 @@ export default function HomePage() {
 
       {/* ── Stats Bar ── */}
       <section className="border-y border-white/10 bg-white/[0.02] px-6 py-6 mb-16">
-        <div className="max-w-4xl mx-auto grid grid-cols-3 divide-x divide-white/10 text-center">
-          <div className="px-4">
-            <p className="text-2xl font-bold text-white">{campaigns.length}</p>
-            <p className="text-xs text-gray-500 mt-1">Kampanye Aktif</p>
+        <div className="max-w-4xl mx-auto grid grid-cols-3 divide-x divide-white/10 text-center gap-2 sm:gap-0">
+          <div className="px-2 sm:px-4">
+            <p className="text-lg sm:text-2xl font-bold text-white">{campaigns.length}</p>
+            <p className="text-[10px] sm:text-xs text-gray-500 mt-1">Kampanye Aktif</p>
           </div>
-          <div className="px-4">
-            <p className="text-2xl font-bold text-white">
+          <div className="px-2 sm:px-4">
+            <p className="text-lg sm:text-2xl font-bold text-white">
               {campaigns.reduce((s, c) => s + Number(c.raised), 0).toFixed(3)}
             </p>
-            <p className="text-xs text-gray-500 mt-1">ETH Terkumpul</p>
+            <p className="text-[10px] sm:text-xs text-gray-500 mt-1">ETH Terkumpul</p>
           </div>
-          <div className="px-4">
-            <p className="text-2xl font-bold text-white">100%</p>
-            <p className="text-xs text-gray-500 mt-1">Transparan On-chain</p>
+          <div className="px-2 sm:px-4">
+            <p className="text-lg sm:text-2xl font-bold text-white">100%</p>
+            <p className="text-[10px] sm:text-xs text-gray-500 mt-1">Transparan On-chain</p>
           </div>
         </div>
       </section>

@@ -7,6 +7,8 @@ import { ethers, Contract } from 'ethers';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { RPC } from '../../lib/config';
 import TxSuccessModal from '../../components/TxSuccessModal';
+import { useToast } from '../../components/Toast';
+import { waitForTxWithTimeout } from '../../utils/withTimeout';
 
 const EXPLORER = 'https://sepolia.etherscan.io';
 
@@ -83,6 +85,7 @@ export default function CampaignDetailPage() {
   const provider = useMemo(() => new ethers.JsonRpcProvider(RPC), []);
   const { user, authenticated } = usePrivy();
   const { wallets } = useWallets();
+  const toast = useToast();
 
   async function getEthProvider() {
     const allWallets = wallets.map(w => ({ addr: w.address, type: w.walletClientType, chain: w.chainId }));
@@ -286,6 +289,41 @@ export default function CampaignDetailPage() {
     return () => clearInterval(intv);
   }, [data?.deadline]);
 
+  // ─── Refresh campaign data (tanpa full reload) ─────────────────────────────
+  async function refreshCampaignData() {
+    if (!id || !ethers.isAddress(id)) return;
+    try {
+      const contract = new Contract(id, CAMPAIGN_ABI, provider);
+      const [totalDonatedBN, donationsRaw, refundable] = await Promise.all([
+        contract.totalDonated(),
+        contract.getDonations(),
+        contract.isRefundable(),
+      ]);
+      const donations: DonationRow[] = (donationsRaw as any[]).map((d) => ({
+        donor: d.donor, amount: ethers.formatEther(d.amount),
+      }));
+      setData((prev: any) => prev ? {
+        ...prev,
+        raised: ethers.formatEther(totalDonatedBN),
+        donations,
+        isFinished: Math.floor(Date.now() / 1000) > prev.deadline || BigInt(totalDonatedBN) >= BigInt(ethers.parseEther(prev.goal)),
+      } : prev);
+      setIsRefundable(refundable);
+
+      // Refresh withdrawals
+      const reqs: WithdrawRow[] = [];
+      for (let i = 0; i < 1000; i++) {
+        try {
+          const r = await contract.requests(i);
+          reqs.push({ amount: ethers.formatEther(r.amount), reason: r.reason, timestamp: Number(r.timestamp), status: Number(r.status) });
+        } catch { break; }
+      }
+      setWithdrawals(reqs);
+    } catch (e) {
+      console.error('refreshCampaignData error:', e);
+    }
+  }
+
   // ─── Actions ─────────────────────────────────────────────────────────────
   async function handleDonate(e: React.FormEvent) {
     e.preventDefault();
@@ -310,37 +348,40 @@ export default function CampaignDetailPage() {
       });
 
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
-      const tx       = await contract.donate({ value: ethers.parseEther(donationAmount) });
-      const receipt  = await tx.wait();
-      setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Donasi berhasil!' });
+      const receipt  = await waitForTxWithTimeout(
+        contract.donate({ value: ethers.parseEther(donationAmount) }).then(async (tx: any) => ({ tx, receipt: await tx.wait() })),
+        60_000, 'Donasi'
+      );
+      setTxResult({ hash: receipt.receipt?.hash ?? receipt.tx.hash, label: 'Donasi berhasil!' });
       setDonationAmount('');
     } catch (err: any) {
-      const debugInfo = `\n\n[DEBUG] user: ${user?.wallet?.address}\nwallet: ${wallets.map(w => w.address + '(' + w.walletClientType + ')').join(', ')}`;
-      alert('Donasi gagal: ' + errText(err) + debugInfo);
+      toast.error('Donasi gagal: ' + errText(err));
     } finally { setDonating(false); }
   }
 
   async function handleRequestWithdraw(e: React.FormEvent) {
     e.preventDefault();
-    if (!withdrawAmount || !withdrawReason.trim()) return alert('Isi jumlah & alasan dulu');
+    if (!withdrawAmount || !withdrawReason.trim()) return toast.error('Isi jumlah & alasan dulu');
     setRequesting(true);
     try {
       const { provider: bp, address: signerAddr } = await getEthProvider();
       const signer   = await bp.getSigner(signerAddr);
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
-      const tx       = await contract.requestWithdraw(ethers.parseEther(withdrawAmount), withdrawReason.trim());
-      const receipt  = await tx.wait();
-      setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Request withdraw terkirim!' });
+      const receipt  = await waitForTxWithTimeout(
+        contract.requestWithdraw(ethers.parseEther(withdrawAmount), withdrawReason.trim()).then(async (tx: any) => ({ tx, receipt: await tx.wait() })),
+        60_000, 'Request Withdraw'
+      );
+      setTxResult({ hash: receipt.receipt?.hash ?? receipt.tx.hash, label: 'Request withdraw terkirim!' });
       setWithdrawAmount('');
       setWithdrawReason('');
     } catch (err: any) {
-      alert('Gagal request withdraw: ' + errText(err));
+      toast.error('Gagal request withdraw: ' + errText(err));
     } finally { setRequesting(false); }
   }
 
   async function handleWithdraw() {
     const approvedIdxs = withdrawals.map((w, i) => w.status === 1 ? i : -1).filter(i => i >= 0);
-    if (approvedIdxs.length === 0) return alert('Belum ada request yang disetujui admin');
+    if (approvedIdxs.length === 0) return toast.error('Belum ada request yang disetujui admin');
     setWithdrawing(true);
     try {
       const { provider: bp, address: signerAddr } = await getEthProvider();
@@ -350,16 +391,18 @@ export default function CampaignDetailPage() {
       for (const i of approvedIdxs) {
         try { await (contract as any).executeWithdraw.staticCall(BigInt(i)); chosen = BigInt(i); break; } catch {}
       }
-      if (chosen === null) return alert('Tidak ada request yang bisa dieksekusi sekarang.');
-      const tx      = await (contract as any).executeWithdraw(chosen);
-      const receipt = await tx.wait();
+      if (chosen === null) return toast.error('Tidak ada request yang bisa dieksekusi sekarang.');
+      const result  = await waitForTxWithTimeout(
+        (contract as any).executeWithdraw(chosen).then(async (tx: any) => ({ tx, receipt: await tx.wait() })),
+        60_000, 'Withdraw'
+      );
       const executed = new Set(executedIds);
       executed.add(Number(chosen));
       setExecutedIds(executed);
       saveExecutedLS(id, executed);
-      setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Withdraw berhasil!' });
+      setTxResult({ hash: result.receipt?.hash ?? result.tx.hash, label: 'Withdraw berhasil!' });
     } catch (err: any) {
-      alert('Withdraw gagal: ' + errText(err));
+      toast.error('Withdraw gagal: ' + errText(err));
     } finally { setWithdrawing(false); }
   }
 
@@ -378,13 +421,15 @@ export default function CampaignDetailPage() {
       const { provider: bp, address: signerAddr } = await getEthProvider();
       const signer   = await bp.getSigner(signerAddr);
       const contract = new Contract(id, CAMPAIGN_ABI, signer);
-      const tx       = await (contract as any).claimRefund();
-      const receipt  = await tx.wait();
+      const result   = await waitForTxWithTimeout(
+        (contract as any).claimRefund().then(async (tx: any) => ({ tx, receipt: await tx.wait() })),
+        60_000, 'Refund'
+      );
       setRefundClaimed(true);
       setRefundAmount('0');
-      setTxResult({ hash: receipt?.hash ?? tx.hash, label: 'Refund berhasil diklaim!' });
+      setTxResult({ hash: result.receipt?.hash ?? result.tx.hash, label: 'Refund berhasil diklaim!' });
     } catch (err: any) {
-      alert('Gagal klaim refund: ' + errText(err));
+      toast.error('Gagal klaim refund: ' + errText(err));
     } finally {
       setClaiming(false);
     }
@@ -465,7 +510,7 @@ export default function CampaignDetailPage() {
       setCommentText('');
       await fetchComments(id);
     } catch (err: any) {
-      alert('Gagal kirim komentar: ' + errText(err));
+      toast.error('Gagal kirim komentar: ' + errText(err));
     } finally {
       setSubmittingComment(false);
     }
@@ -505,7 +550,7 @@ export default function CampaignDetailPage() {
       <TxSuccessModal
         hash={txResult.hash}
         label={txResult.label}
-        onClose={() => { setTxResult(null); window.location.reload(); }}
+        onClose={() => { setTxResult(null); refreshCampaignData(); }}
       />
     )}
     <div className="min-h-screen bg-[#0a0f1e] text-white" suppressHydrationWarning>
